@@ -151,15 +151,61 @@ env = {
 }
 ```
 
-在 Codex IDE 扩展或 ChatGPT 桌面端中，打开 **MCP servers → Add server**，选择 **STDIO**，填写相同的命令、参数和环境变量，然后保存并重启扩展或应用。配置完成后，可在 Codex TUI 中输入 `/mcp` 查看已连接的 MCP 服务。
+在 Codex IDE 扩展中，打开 **MCP servers → Add server**，选择 **STDIO**，填写相同的命令、参数和环境变量，然后保存并重启扩展。配置完成后，可在 Codex TUI 中输入 `/mcp` 查看已连接的 MCP 服务。
 
-## 连接 ChatGPT 网页端
+## 连接 ChatGPT 桌面端
 
-ChatGPT 网页端不会读取本机的 Codex 配置。按照官方接入流程，MCP 服务必须通过公共 HTTPS Streamable HTTP 端点（通常以 `/mcp` 结尾）或 Secure MCP Tunnel 暴露；随后在 **Settings → Security and login → Developer mode** 中开启开发者模式，再从 **ChatGPT Plugins → +** 添加服务。
+官方 ChatGPT 桌面端支持通过 **STDIO** 连接本地 MCP 服务，并与 Codex CLI、Codex IDE 扩展共享 MCP 配置。这是直接在 ChatGPT 应用中使用本项目最简单的方式。
 
-本项目当前提供的是本地 STDIO MCP 服务和独立的游戏调试 HTTP 桥接，并未提供公共 Streamable HTTP MCP 端点。因此本地使用应采用上面的 Codex/ChatGPT 桌面端 STDIO 方式；若要从 ChatGPT 网页端连接，还需要额外部署 HTTPS MCP 服务或隧道。
+1. 先构建服务，让应用启动编译后的入口文件：
 
-官方参考：[Codex CLI](https://developers.openai.com/codex/cli) · [MCP 接入文档](https://learn.chatgpt.com/docs/extend/mcp) · [ChatGPT MCP 接入与测试](https://developers.openai.com/plugins/deploy/connect-chatgpt)
+   ```bash
+   npm run build
+   ```
+
+2. 打开 **ChatGPT → Settings → MCP servers → Add server**。
+
+3. 填写以下内容。将占位路径替换为绝对路径；项目路径必须包含 RPG Maker 项目的 `data/` 目录。
+
+   ```text
+   Name: rpgmaker
+   Transport: STDIO
+   Command: node
+   Arguments: /absolute/path/to/RPG-Maker-AI-Toolkit/dist/index.js
+
+   Environment:
+     RPGMAKER_PROJECT_PATH=/absolute/path/to/MyGame
+     RPGMAKER_ENGINE=auto
+     RPGMAKER_BRIDGE_PORT=9001
+   ```
+
+   只有在需要使用 `launch-game` 工具时，才添加 `RPGMAKER_EXECUTABLE_PATH=/absolute/path/to/RPGMaker`。
+
+4. 保存服务，并在 MCP servers 设置中选择 **Restart**。
+
+5. 在新的 ChatGPT 对话中输入 `/mcp`，确认 `rpgmaker` 已启用。建议先使用只读请求测试，例如：`Run health-check and list the maps in my project.`
+
+应用会自行启动配置好的 STDIO 命令，因此不需要额外保持 `npm run dev` 或 `pnpm run dev` 进程运行。RPG Maker 游戏使用生成的 `RPGMakerDebugger` 插件时，仍然需要配置 `RPGMAKER_BRIDGE_PORT`；但这个端口不是 MCP 服务地址。
+
+## 连接 ChatGPT 网页端或 Work
+
+ChatGPT 网页端不会读取本机 Codex 配置文件，也不能通过输入 shell 命令直接连接本地 STDIO 进程。官方托管版 ChatGPT 接入流程如下：
+
+1. 让 MCP 服务通过公共 HTTPS **Streamable HTTP** 端点访问，通常以 `/mcp` 结尾；或者使用 **Secure MCP Tunnel** 连接私有服务。本仓库当前没有实现远程 Streamable HTTP MCP 端点。
+
+2. 在 ChatGPT 中打开 **Settings → Security and login**，开启 **Developer mode**。该功能是否可用取决于账号或工作区策略。
+
+3. 打开 [ChatGPT Plugins](https://chatgpt.com/plugins)，点击 **+**，填写面向用户的名称和描述；在 **Connection** 中填入包含 `/mcp` 的 HTTPS MCP 地址。使用私有隧道时，选择 **Tunnel**，再选择或填写 `tunnel_id`。
+
+4. 创建连接并检查发现的工具，然后新建 Work 对话，从工具菜单添加该 MCP 连接。建议先使用只读请求（例如 `Run health-check`）验证，再调用编辑工具。
+
+5. 如果修改了工具名称、描述、Schema 或注解，先部署/重启服务，再在 ChatGPT Plugins 中选择 **Refresh**，并新建对话后重新测试。
+
+**重要：** `RPGMAKER_BRIDGE_PORT=9001` 只是 RPG Maker 调试插件使用的本地 HTTP 桥接（`/ping`、`/ack`、`/gamestate` 等路由），不是 MCP HTTP 地址。因此不要把 `http://127.0.0.1:9001` 填入 ChatGPT 的连接 URL。单独运行 `npm run dev` 或 `pnpm run dev` 足够服务本地 STDIO 客户端，但不足以连接 ChatGPT 网页端。
+
+如果需要连接本地私有服务，请参考官方 [Secure MCP Tunnel](https://developers.openai.com/api/docs/guides/secure-mcp-tunnels) 文档：创建 tunnel，配置 `tunnel-client` 通过 STDIO 访问本服务，保持 `tunnel-client run` 运行，然后在创建 ChatGPT 开发者模式应用时选择 **Tunnel**。Secure MCP Tunnel 支持私有的开发者模式测试；公开发布插件仍需要稳定的公共 HTTPS 端点。
+
+官方参考：[ChatGPT 与 Codex 中的 MCP](https://learn.chatgpt.com/docs/extend/mcp) · [Quickstart](https://developers.openai.com/plugins/quickstart) · [连接并测试插件](https://developers.openai.com/plugins/deploy/connect-chatgpt) · [Secure MCP Tunnel](https://developers.openai.com/api/docs/guides/secure-mcp-tunnels)
 
 ## 项目结构
 

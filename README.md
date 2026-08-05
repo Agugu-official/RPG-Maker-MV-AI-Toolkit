@@ -153,15 +153,61 @@ env = {
 }
 ```
 
-In the Codex IDE extension or ChatGPT desktop app, open **MCP servers → Add server**, choose **STDIO**, enter the same command, arguments, and environment variables, then save and restart the extension/app. Once configured, `/mcp` in the Codex TUI shows the active MCP servers.
+In the Codex IDE extension, open **MCP servers → Add server**, choose **STDIO**, enter the same command, arguments, and environment variables, then save and restart the extension. Once configured, `/mcp` in the Codex TUI shows the active MCP servers.
 
-### Connecting to ChatGPT web
+### Connecting to the ChatGPT desktop app
 
-ChatGPT web does not read the local Codex configuration. The official ChatGPT connection flow requires the MCP server to be reachable through a public HTTPS Streamable HTTP endpoint, typically ending in `/mcp`, or through a Secure MCP Tunnel. It then requires **Settings → Security and login → Developer mode**, followed by adding the server from **ChatGPT Plugins → +**.
+The official ChatGPT desktop app supports local MCP servers over **STDIO** and shares the same MCP configuration with Codex CLI and the Codex IDE extension. This is the simplest way to use this repository directly from the ChatGPT app.
 
-This repository currently exposes a local STDIO MCP server and a separate game-debug HTTP bridge, not a public Streamable HTTP MCP endpoint. Therefore the Codex/ChatGPT desktop STDIO setup above is the supported local path; connecting from ChatGPT web requires an additional HTTPS MCP deployment or tunnel.
+1. Build the server so the app can launch the compiled entry point:
 
-Official references: [Codex CLI](https://developers.openai.com/codex/cli) · [MCP connection guide](https://learn.chatgpt.com/docs/extend/mcp) · [ChatGPT MCP connection and testing](https://developers.openai.com/plugins/deploy/connect-chatgpt)
+   ```bash
+   npm run build
+   ```
+
+2. Open **ChatGPT → Settings → MCP servers → Add server**.
+
+3. Enter the following values. Replace every placeholder with an absolute path; the project path must contain the RPG Maker project's `data/` directory.
+
+   ```text
+   Name: rpgmaker
+   Transport: STDIO
+   Command: node
+   Arguments: /absolute/path/to/RPG-Maker-AI-Toolkit/dist/index.js
+
+   Environment:
+     RPGMAKER_PROJECT_PATH=/absolute/path/to/MyGame
+     RPGMAKER_ENGINE=auto
+     RPGMAKER_BRIDGE_PORT=9001
+   ```
+
+   Add `RPGMAKER_EXECUTABLE_PATH=/absolute/path/to/RPGMaker` only when the `launch-game` tool is needed.
+
+4. Save the server and select **Restart** in the MCP servers settings.
+
+5. In a new ChatGPT conversation, type `/mcp` to confirm that `rpgmaker` is enabled. Start with a read-only request such as `Run health-check and list the maps in my project.`
+
+The app launches the configured STDIO command itself. You do not need to keep a separate `npm run dev` or `pnpm run dev` process running for this connection. The `RPGMAKER_BRIDGE_PORT` value is still needed when the RPG Maker game uses the generated `RPGMakerDebugger` plugin, but it is not the MCP server address.
+
+### Connecting to ChatGPT web or Work
+
+ChatGPT web does not read local Codex configuration files and cannot attach to a local STDIO process by entering a shell command. The official hosted ChatGPT flow is:
+
+1. Make the MCP server reachable through a public HTTPS **Streamable HTTP** endpoint, typically ending in `/mcp`, or connect a private server through **Secure MCP Tunnel**. This repository currently does not implement a remote Streamable HTTP MCP endpoint.
+
+2. In ChatGPT, open **Settings → Security and login** and turn on **Developer mode**. Availability can depend on the account or workspace policy.
+
+3. Open [ChatGPT Plugins](https://chatgpt.com/plugins), select **+**, enter a user-facing name and description, and under **Connection** enter the HTTPS MCP URL including `/mcp`. For a private tunnel, choose **Tunnel** and select or enter its `tunnel_id`.
+
+4. Create the connection, review the discovered tools, then start a new Work conversation and add the MCP connection from the tools menu. Test with a read-only request such as `Run health-check` before using editing tools.
+
+5. After changing tool names, descriptions, schemas, or annotations, deploy/restart the server, select **Refresh** in ChatGPT Plugins, and start a new conversation before retesting.
+
+**Important:** `RPGMAKER_BRIDGE_PORT=9001` is only the local HTTP bridge used by the RPG Maker debug plugin (`/ping`, `/ack`, `/gamestate`, and similar routes). It is not an MCP HTTP endpoint, so `http://127.0.0.1:9001` must not be entered in the ChatGPT connection URL field. Running `npm run dev` or `pnpm run dev` alone is therefore sufficient for local STDIO clients, but not for ChatGPT web.
+
+For a private local server, follow the official [Secure MCP Tunnel](https://developers.openai.com/api/docs/guides/secure-mcp-tunnels) guide: create a tunnel, configure `tunnel-client` to reach this server over STDIO, keep `tunnel-client run` running, and then choose **Tunnel** when creating the ChatGPT developer-mode app. Secure MCP Tunnel supports private developer-mode testing; public plugin distribution still requires a stable public HTTPS endpoint.
+
+Official references: [MCP in ChatGPT and Codex](https://learn.chatgpt.com/docs/extend/mcp) · [Quickstart](https://developers.openai.com/plugins/quickstart) · [Connect and test your plugin](https://developers.openai.com/plugins/deploy/connect-chatgpt) · [Secure MCP Tunnel](https://developers.openai.com/api/docs/guides/secure-mcp-tunnels)
 
 ### Project Structure
 
