@@ -1,5 +1,5 @@
 /**
- * Tipos y interfaces para RPG Maker MZ
+ * Shared RPG Maker MV/MZ data interfaces
  */
 
 export interface RPGActor {
@@ -286,9 +286,8 @@ export interface RPGTileset {
   note: string;
 }
 
-export interface RPGAnimationFrame {
-  cellData: number[][];
-}
+/** MV stores each frame as an array of cell arrays. MZ uses a different timeline shape. */
+export type RPGAnimationFrame = number[][] | Record<string, unknown>;
 
 export interface RPGAnimationTiming {
   flashColor: number[];
@@ -301,13 +300,20 @@ export interface RPGAnimationTiming {
 export interface RPGAnimation {
   id: number;
   name: string;
-  animation1Hue: number;
-  animation1Name: string;
-  animation2Hue: number;
-  animation2Name: string;
-  frames: RPGAnimationFrame[];
-  position: number; // 0=head, 1=center, 2=foot, 3=screen
-  timings: RPGAnimationTiming[];
+  animation1Hue?: number;
+  animation1Name?: string;
+  animation2Hue?: number;
+  animation2Name?: string;
+  frames?: RPGAnimationFrame[];
+  position?: number; // MV: 0=head, 1=center, 2=foot, 3=screen
+  timings?: RPGAnimationTiming[];
+  effectName?: string;
+  displayType?: number;
+  offsetX?: number;
+  offsetY?: number;
+  speed?: number;
+  flashTimings?: unknown[];
+  soundTimings?: unknown[];
 }
 
 export interface RPGCommonEvent {

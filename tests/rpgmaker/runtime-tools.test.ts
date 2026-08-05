@@ -17,7 +17,7 @@ function makeBridge(overrides?: {
   queryResult?: unknown;
 }) {
   const qr = overrides?.queryResult !== undefined ? overrides.queryResult : null;
-  return {
+  const bridge = {
     connected: overrides?.connected !== undefined ? overrides.connected : true,
     waitForAck: vi.fn().mockResolvedValue(undefined),
     waitForGameState: vi.fn().mockResolvedValue({
@@ -30,6 +30,21 @@ function makeBridge(overrides?: {
     }),
     setCommand: vi.fn(),
   };
+  const publicBridge = bridge as typeof bridge & {
+    sendAndWaitForAck: ReturnType<typeof vi.fn>;
+    sendAndWaitForGameState: ReturnType<typeof vi.fn>;
+  };
+  publicBridge.sendAndWaitForAck = vi.fn().mockImplementation((command: string, args: Record<string, unknown>, timeout: number) => {
+      const result = publicBridge.waitForAck(timeout);
+      publicBridge.setCommand(command, args);
+      return Promise.resolve(result).then(() => true);
+    });
+  publicBridge.sendAndWaitForGameState = vi.fn().mockImplementation((command: string, args: Record<string, unknown>, timeout: number) => {
+      const result = publicBridge.waitForGameState(timeout);
+      publicBridge.setCommand(command, args);
+      return result;
+    });
+  return publicBridge;
 }
 
 let tmpDir: string;

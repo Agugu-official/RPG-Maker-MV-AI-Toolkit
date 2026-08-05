@@ -5,7 +5,7 @@
 export const CreatePluginAdvancedTool = {
   name: "create-plugin-advanced",
   description:
-    "Generate a sophisticated RPG Maker MZ plugin with parameters, documentation, and predefined structure",
+    "Generate a sophisticated plugin for the detected RPG Maker MV or MZ project with parameters, documentation, and a native engine template",
   inputSchema: {
     type: "object" as const,
     properties: {

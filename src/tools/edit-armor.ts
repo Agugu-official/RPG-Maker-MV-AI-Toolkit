@@ -2,7 +2,7 @@ import type { Tool } from "@modelcontextprotocol/sdk/types.js";
 
 export const EditArmorTool: Tool = {
   name: "edit-armor",
-  description: "Create or update an armor in the RPG Maker MZ project. Omit armor_id to create a new armor.",
+  description: "Create or update an armor in the RPG Maker MV/MZ project. Omit armor_id to create a new armor.",
   inputSchema: {
     type: "object",
     properties: {

@@ -2,7 +2,7 @@ import type { Tool } from "@modelcontextprotocol/sdk/types.js";
 
 export const EditClassTool: Tool = {
   name: "edit-class",
-  description: "Create or update a class in the RPG Maker MZ project. Omit class_id to create a new class.",
+  description: "Create or update a class in the RPG Maker MV/MZ project. Omit class_id to create a new class.",
   inputSchema: {
     type: "object",
     properties: {

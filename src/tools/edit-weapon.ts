@@ -2,7 +2,7 @@ import type { Tool } from "@modelcontextprotocol/sdk/types.js";
 
 export const EditWeaponTool: Tool = {
   name: "edit-weapon",
-  description: "Create or update a weapon in the RPG Maker MZ project. Omit weapon_id to create a new weapon.",
+  description: "Create or update a weapon in the RPG Maker MV/MZ project. Omit weapon_id to create a new weapon.",
   inputSchema: {
     type: "object",
     properties: {

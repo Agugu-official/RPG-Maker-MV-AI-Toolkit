@@ -3,7 +3,7 @@ import type { Tool } from "@modelcontextprotocol/sdk/types.js";
 export const CreateStateTool: Tool = {
   name: "create-state",
   description:
-    "Create a new state (status effect) in the RPG Maker MZ database. The name is required. " +
+    "Create a new state (status effect) in the RPG Maker MV/MZ database. The name is required. " +
     "A state can represent conditions like Poison, Sleep, Blind, etc. " +
     "Returns the new state_id.",
   inputSchema: {

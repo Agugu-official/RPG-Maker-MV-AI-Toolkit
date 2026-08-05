@@ -6,7 +6,9 @@ import { RPGMakerReader } from "../../src/rpgmaker/reader.js";
 import { RPGMakerWriter } from "../../src/rpgmaker/writer.js";
 import { RPGMakerDebugBridge } from "../../src/rpgmaker/debug-bridge.js";
 import { ChangeLog } from "../../src/rpgmaker/change-log.js";
+import { detectProjectEngine } from "../../src/rpgmaker/engine.js";
 import { handleEditSystem } from "../../src/handlers/system.js";
+import { handleReadSystemExtended } from "../../src/handlers/system-extended.js";
 import type { HandlerContext } from "../../src/handlers/types.js";
 
 function writeJson(filePath: string, data: unknown): void {
@@ -47,8 +49,8 @@ function createTempProject(): string {
 
 function makeCtx(dir: string, input: Record<string, unknown>): HandlerContext {
   return {
-    reader: new RPGMakerReader({ projectPath: dir }),
-    writer: new RPGMakerWriter({ projectPath: dir, createBackup: false }),
+    reader: new RPGMakerReader({ projectPath: dir, engine: "mz" }),
+    writer: new RPGMakerWriter({ projectPath: dir, createBackup: false, engine: "mz" }),
     input,
     projectPath: dir,
     debugBridge: new RPGMakerDebugBridge(),
@@ -120,6 +122,30 @@ describe("handleEditSystem", () => {
     await handleEditSystem(makeCtx(dir, { victory_me: { name: "Fanfare" } }));
     const sys = readJson(path.join(dir, "data", "System.json")) as Record<string, unknown>;
     expect((sys.victoryMe as Record<string, unknown>).name).toBe("Fanfare");
+  });
+
+  it("rejects MZ-only fields for an MV profile before writing", async () => {
+    const ctx = makeCtx(dir, { opt_autosave: true });
+    ctx.reader = new RPGMakerReader({ projectPath: dir, engine: "mv" });
+    ctx.writer = new RPGMakerWriter({ projectPath: dir, createBackup: false, engine: "mv" });
+    ctx.profile = detectProjectEngine(dir, "mv");
+    const before = fs.readFileSync(path.join(dir, "data", "System.json"), "utf-8");
+
+    const result = JSON.parse(await handleEditSystem(ctx));
+    expect(result.error).toContain("not supported by RPG Maker MV");
+    expect(fs.readFileSync(path.join(dir, "data", "System.json"), "utf-8")).toBe(before);
+    expect(fs.existsSync(path.join(dir, "mcp-changes.json"))).toBe(false);
+  });
+
+  it("omits MZ-only fields when reading extended system data for MV", async () => {
+    const ctx = makeCtx(dir, {});
+    ctx.reader = new RPGMakerReader({ projectPath: dir, engine: "mv" });
+    ctx.writer = new RPGMakerWriter({ projectPath: dir, createBackup: false, engine: "mv" });
+    ctx.profile = detectProjectEngine(dir, "mv");
+    const result = JSON.parse(await handleReadSystemExtended(ctx));
+    expect(result.engine).toBe("mv");
+    expect(result.data.basic).not.toHaveProperty("optAutosave");
+    expect(result.data.basic).not.toHaveProperty("optFollowerDistance");
   });
 
   it("preserves existing fields not in the update", async () => {

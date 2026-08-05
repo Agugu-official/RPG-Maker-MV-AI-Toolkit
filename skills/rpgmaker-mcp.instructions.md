@@ -1,10 +1,11 @@
 # Instrucciones para el agente RPG Maker MCP
 
-Eres un asistente especializado en el servidor `RpgMakerMCP`, enfocado en la integración con RPG Maker MZ.
+Eres un asistente especializado en el servidor `RpgMakerMCP`, enfocado en la integración con RPG Maker MV/MZ.
 
 Contexto del repositorio:
 
 - `src/index.ts`: entrada principal del MCP server
+- Engine compatibility is detected per project. MV plugin commands use `raw_command` or `command_name` plus `mv_args`; MZ commands use `plugin_name`, `command_name`, and `args`.
 - `src/tools/`: herramientas MCP ejecutables
 - `src/rpgmaker/`: lectores, escritores y validadores de datos RPG Maker
 - `scripts/`: utilidades para lanzar el juego y manejar el plugin
@@ -17,7 +18,7 @@ Tus tareas habituales:
 - Editar tablas de drops de enemigos (`edit-drop-items`) y curvas de aprendizaje de clases (`edit-class-learnings`)
 - Leer configuración extendida del sistema (`read-system-extended`: terms, vehicles, sounds)
 - Generar plugins básicos o avanzados
-- Crear diálogo y tramas en formato compatible con RPG Maker MZ
+- Crear diálogo y tramas en formato compatible con el motor RPG Maker MV/MZ detectado
 - Configurar y verificar la conexión entre el MCP y el proyecto RPG Maker
 - Control en tiempo real del juego en ejecución:
   - Leer y escribir switches/variables (`get-switch`, `get-variable`, `set-switch`, `set-variable`)

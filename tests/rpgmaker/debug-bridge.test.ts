@@ -74,6 +74,13 @@ describe("RPGMakerDebugBridge", () => {
     it("waitForGameState rejects after timeout", async () => {
       await expect(bridge.waitForGameState(100)).rejects.toThrow("Timed out");
     });
+
+    it("arms the state waiter before publishing a query command", async () => {
+      setTimeout(() => bridge.setGameState(makeGameState({ mapId: 9 })), 20);
+      const state = await bridge.sendAndWaitForGameState("execute_script", { code: "query" }, 1000);
+      expect(state.mapId).toBe(9);
+      expect(bridge.getCommand()).toBeNull();
+    });
   });
 
   describe("ack mechanism", () => {
@@ -98,6 +105,13 @@ describe("RPGMakerDebugBridge", () => {
       bridge.resolveAck();
       const r2 = await p2;
       expect(r2).toBe(true);
+    });
+
+    it("arms the ACK waiter before publishing a command", async () => {
+      setTimeout(() => bridge.resolveAck(), 20);
+      const ok = await bridge.sendAndWaitForAck("set_switch", { id: 1, value: true }, 1000);
+      expect(ok).toBe(true);
+      expect(bridge.getCommand()).toBeNull();
     });
   });
 

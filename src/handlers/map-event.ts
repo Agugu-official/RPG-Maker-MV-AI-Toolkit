@@ -58,7 +58,7 @@ export async function handleCreateMapEvent(ctx: HandlerContext): Promise<string>
       }
 
       for (const cmd of page.commands || []) {
-        commands.push(...commandInputToEventCommands(cmd));
+        commands.push(...commandInputToEventCommands(cmd, reader.engine));
       }
 
       commands.push({ code: 0, indent: 0, parameters: [] });

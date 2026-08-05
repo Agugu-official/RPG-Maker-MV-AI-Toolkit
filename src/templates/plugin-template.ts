@@ -2,6 +2,8 @@
  * Plantillas para generación de plugins
  */
 
+import type { RPGMakerEngine } from "../rpgmaker/engine.js";
+
 export const PluginTemplates = {
   // Template: Plugin con parámetros configurables
   withParameters: (
@@ -15,8 +17,25 @@ export const PluginTemplates = {
       default?: string;
       description?: string;
       desc?: string;
-    }>
+    }>,
+    engine: RPGMakerEngine = "mz",
   ): string => {
+    const target = engine === "mv" ? "MV" : "MZ";
+    const commandRegistration = engine === "mv"
+      ? `
+  const _Game_Interpreter_pluginCommand = Game_Interpreter.prototype.pluginCommand;
+  Game_Interpreter.prototype.pluginCommand = function(command, args) {
+    _Game_Interpreter_pluginCommand.call(this, command, args);
+    if (command === PLUGIN_NAME && args && args[0] === "exampleCommand") {
+      console.log("[" + PLUGIN_NAME + "] Command executed", args.slice(1));
+    }
+  };
+`
+      : `
+  PluginManager.registerCommand(PLUGIN_NAME, "exampleCommand", args => {
+    console.log("[" + PLUGIN_NAME + "] Command executed", args);
+  });
+`;
     const paramsJson = parameters
       .map(
         (p) => `
@@ -28,7 +47,7 @@ export const PluginTemplates = {
       .join("");
 
     return `/*:
- * @target MZ
+ * @target ${target}
  * @plugindesc ${description}
  * @author ${author}
  * @version ${version}${paramsJson}
@@ -47,9 +66,7 @@ export const PluginTemplates = {
   // Get plugin parameters
   const params = PluginManager.parameters(PLUGIN_NAME);
 
-  PluginManager.registerCommand(PLUGIN_NAME, "exampleCommand", args => {
-    console.log(\`[\${PLUGIN_NAME}] Command executed\`, args);
-  });
+${commandRegistration}
 
   console.log(\`\${PLUGIN_NAME} v\${PLUGIN_VERSION} loaded\`);
 })();`;
@@ -60,10 +77,12 @@ export const PluginTemplates = {
     pluginName: string,
     description: string,
     author: string,
-    version: string
+    version: string,
+    engine: RPGMakerEngine = "mz"
   ): string => {
+    const target = engine === "mv" ? "MV" : "MZ";
     return `/*:
- * @target MZ
+ * @target ${target}
  * @plugindesc ${description}
  * @author ${author}
  * @version ${version}
@@ -97,10 +116,12 @@ export const PluginTemplates = {
     pluginName: string,
     description: string,
     author: string,
-    version: string
+    version: string,
+    engine: RPGMakerEngine = "mz"
   ): string => {
+    const target = engine === "mv" ? "MV" : "MZ";
     return `/*:
- * @target MZ
+ * @target ${target}
  * @plugindesc ${description}
  * @author ${author}
  * @version ${version}
@@ -131,10 +152,36 @@ export const PluginTemplates = {
     pluginName: string,
     description: string,
     author: string,
-    version: string
+    version: string,
+    engine: RPGMakerEngine = "mz"
   ): string => {
+    const target = engine === "mv" ? "MV" : "MZ";
+    const commandRegistration = engine === "mv"
+      ? `
+  const _Game_Interpreter_pluginCommand = Game_Interpreter.prototype.pluginCommand;
+  Game_Interpreter.prototype.pluginCommand = function(command, args) {
+    _Game_Interpreter_pluginCommand.call(this, command, args);
+    if (command !== PLUGIN_NAME || !args || args[0] !== "triggerEvent") return;
+    const mapId = Number(args[1] || $gameMap._mapId);
+    const eventId = Number(args[2]);
+    if (mapId === $gameMap._mapId) {
+      const event = $gameMap.event(eventId);
+      if (event) event.start();
+    }
+  };
+`
+      : `
+  PluginManager.registerCommand(PLUGIN_NAME, "triggerEvent", args => {
+    const mapId = Number(args.mapId || $gameMap._mapId);
+    const eventId = Number(args.eventId);
+    if (mapId === $gameMap._mapId) {
+      const event = $gameMap.event(eventId);
+      if (event) event.start();
+    }
+  });
+`;
     return `/*:
- * @target MZ
+ * @target ${target}
  * @plugindesc ${description}
  * @author ${author}
  * @version ${version}
@@ -146,17 +193,7 @@ export const PluginTemplates = {
 (() => {
   const PLUGIN_NAME = "${pluginName}";
 
-  PluginManager.registerCommand(PLUGIN_NAME, "triggerEvent", args => {
-    const mapId = Number(args.mapId || $gameMap._mapId);
-    const eventId = Number(args.eventId);
-    
-    if (mapId === $gameMap._mapId) {
-      const event = $gameMap.event(eventId);
-      if (event) {
-        event.start();
-      }
-    }
-  });
+${commandRegistration}
 
   console.log(\`[\${PLUGIN_NAME}] Loaded\`);
 })();`;
@@ -167,10 +204,12 @@ export const PluginTemplates = {
     pluginName: string,
     description: string,
     author: string,
-    version: string
+    version: string,
+    engine: RPGMakerEngine = "mz"
   ): string => {
+    const target = engine === "mv" ? "MV" : "MZ";
     return `/*:
- * @target MZ
+ * @target ${target}
  * @plugindesc ${description}
  * @author ${author}
  * @version ${version}
@@ -215,9 +254,10 @@ export const PluginTemplates = {
   },
 
   // Template: Debug Bridge plugin (AI runtime control via XHR)
-  debugBridge: (bridgePort = 9001): string => {
+  debugBridge: (bridgePort = 9001, engine: RPGMakerEngine = "mz"): string => {
+    const target = engine === "mv" ? "MV" : "MZ";
     return `/*:
- * @target MZ
+ * @target ${target}
  * @plugindesc AI Debug Bridge - MCP runtime control
  * @author MCP Server
  * @version 2.1.0
@@ -276,6 +316,26 @@ var RPGMakerDebugger = RPGMakerDebugger || {};
     }
 
     function ack() { xhrPost(bridgeUrl + "/ack", { done: true }); }
+
+    // MV returns booleans from save/load while MZ may return Promises.
+    function whenComplete(result, onSuccess) {
+        function complete(value) {
+            if (value === false) {
+                xhrPost(bridgeUrl + "/log", { type: "error", message: "DataManager save/load operation failed" });
+                ack();
+            } else {
+                onSuccess();
+            }
+        }
+        if (result && typeof result.then === "function") {
+            result.then(complete).catch(function(error) {
+                xhrPost(bridgeUrl + "/log", { type: "error", message: String(error) });
+                ack();
+            });
+        } else {
+            complete(result);
+        }
+    }
 
     // --- Game state reporter ---
 
@@ -371,8 +431,7 @@ var RPGMakerDebugger = RPGMakerDebugger || {};
                     reportFullGameState();
                     break;
                 case "save_game":
-                    DataManager.saveGame(Number(cmd.slot) || 98);
-                    ack();
+                    whenComplete(DataManager.saveGame(Number(cmd.slot) || 98), function() { ack(); });
                     break;
                 case "set_party_state":
                     $gameParty.members().forEach(function(actor) {
@@ -389,7 +448,7 @@ var RPGMakerDebugger = RPGMakerDebugger || {};
                     ack();
                     break;
                 case "load_game":
-                    DataManager.loadGame(Number(cmd.slot) || 98).then(function() {
+                    whenComplete(DataManager.loadGame(Number(cmd.slot) || 98), function() {
                         SceneManager.goto(Scene_Map);
                         // report state once the map finishes loading
                         var _origStart = Scene_Map.prototype.start;

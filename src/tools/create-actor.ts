@@ -3,7 +3,7 @@ import type { Tool } from "@modelcontextprotocol/sdk/types.js";
 export const CreateActorTool: Tool = {
   name: "create-actor",
   description:
-    "Create a new actor (playable character) in the RPG Maker MZ database. The name is required. " +
+    "Create a new actor (playable character) in the RPG Maker MV/MZ database. The name is required. " +
     "Defaults: classId=1, initialLevel=1, maxLevel=99, equips=[0,0,0,0,0]. " +
     "Returns the new actor_id.",
   inputSchema: {

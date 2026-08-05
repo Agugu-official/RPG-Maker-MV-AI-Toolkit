@@ -1,6 +1,6 @@
 export const ControlWeatherRuntimeTool = {
   name: "control-weather-runtime",
-  description: "Control the weather effect in a running RPG Maker MZ game (rain, storm, snow, or clear)",
+  description: "Control the weather effect in a running RPG Maker MV/MZ game (rain, storm, snow, or clear)",
   inputSchema: {
     type: "object" as const,
     properties: {

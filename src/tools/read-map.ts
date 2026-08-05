@@ -2,7 +2,7 @@ import type { Tool } from "@modelcontextprotocol/sdk/types.js";
 
 export const ReadMapTool: Tool = {
   name: "read-map",
-  description: "Read map information from the RPG Maker MZ project: dimensions, events, encounters, tileset, display name.",
+  description: "Read map information from the RPG Maker MV/MZ project: dimensions, events, encounters, tileset, display name.",
   inputSchema: {
     type: "object",
     properties: {

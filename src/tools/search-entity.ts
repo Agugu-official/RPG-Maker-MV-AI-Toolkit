@@ -1,6 +1,6 @@
 export const SearchEntityTool = {
   name: "search-entity",
-  description: "Search for RPG Maker MZ entities (actors, items, skills, etc.) by a text query. Returns matching entries with their IDs and names.",
+  description: "Search for RPG Maker MV/MZ entities (actors, items, skills, etc.) by a text query. Returns matching entries with their IDs and names.",
   inputSchema: {
     type: "object" as const,
     properties: {

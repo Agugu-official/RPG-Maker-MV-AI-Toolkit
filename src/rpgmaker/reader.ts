@@ -1,6 +1,4 @@
-/**
- * Reader para archivos de datos de RPG Maker MZ
- */
+/** Reader for shared RPG Maker MV/MZ data files. */
 
 import * as fs from "fs";
 import * as path from "path";
@@ -16,10 +14,15 @@ import type {
   RPGMap,
   RPGDataType,
 } from "../types/rpgmaker.js";
+import {
+  detectProjectEngine,
+  type RPGMakerEngine,
+} from "./engine.js";
 
 export interface ReadOptions {
   projectPath: string;
   debug?: boolean;
+  engine?: RPGMakerEngine;
 }
 
 export class RPGMakerReader {
@@ -27,15 +30,17 @@ export class RPGMakerReader {
   private dataPath: string;
   private debug: boolean;
   private cache: Map<string, unknown> = new Map();
+  public readonly engine: RPGMakerEngine;
 
   constructor(options: ReadOptions) {
     this.projectPath = options.projectPath;
     this.dataPath = path.join(this.projectPath, "data");
     this.debug = options.debug || false;
+    this.engine = options.engine ?? detectProjectEngine(this.projectPath).engine;
 
     if (!fs.existsSync(this.dataPath)) {
       throw new Error(
-        `Data directory not found at: ${this.dataPath}. Is this a valid RPG Maker MZ project?`
+        `Data directory not found at: ${this.dataPath}. Is this a valid RPG Maker ${this.engine.toUpperCase()} project?`
       );
     }
   }

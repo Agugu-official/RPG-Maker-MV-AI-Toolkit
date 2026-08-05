@@ -3,7 +3,7 @@ import type { Tool } from "@modelcontextprotocol/sdk/types.js";
 export const CreateArmorTool: Tool = {
   name: "create-armor",
   description:
-    "Create a new armor in the RPG Maker MZ database. The name is required. " +
+    "Create a new armor in the RPG Maker MV/MZ database. The name is required. " +
     "Stat bonuses are stored in an 8-element params array " +
     "[maxHp, maxMp, atk, def, mat, mdf, agi, luk]; use defense and magic_defense to set the relevant slots. " +
     "Returns the new armor_id.",

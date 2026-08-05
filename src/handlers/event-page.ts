@@ -26,7 +26,7 @@ interface PageInput {
   commands?: MapEventCommandInput[];
 }
 
-function buildPage(page: PageInput) {
+function buildPage(page: PageInput, engine: "mv" | "mz") {
   const base = defaultEventPage();
 
   if (page.trigger !== undefined) base.trigger = page.trigger;
@@ -43,7 +43,7 @@ function buildPage(page: PageInput) {
   if (page.conditions) base.conditions = { ...base.conditions, ...page.conditions };
 
   if (page.commands && page.commands.length > 0) {
-    const cmds = page.commands.flatMap((cmd) => commandInputToEventCommands(cmd));
+    const cmds = page.commands.flatMap((cmd) => commandInputToEventCommands(cmd, engine));
     cmds.push({ code: 0, indent: 0, parameters: [] });
     base.list = cmds;
   }
@@ -76,7 +76,7 @@ export async function handleEditEventPage(ctx: HandlerContext): Promise<string> 
     if (mode === "add") {
       const pageInput = input.page as PageInput | undefined;
       if (!pageInput) return JSON.stringify({ error: "page is required for add mode" });
-      pages.push(buildPage(pageInput));
+      pages.push(buildPage(pageInput, reader.engine));
     } else if (mode === "replace") {
       const pageIndex = input.page_index as number | undefined;
       if (typeof pageIndex !== "number" || pageIndex < 0 || pageIndex >= pages.length) {
@@ -84,7 +84,7 @@ export async function handleEditEventPage(ctx: HandlerContext): Promise<string> 
       }
       const pageInput = input.page as PageInput | undefined;
       if (!pageInput) return JSON.stringify({ error: "page is required for replace mode" });
-      pages[pageIndex] = buildPage(pageInput);
+      pages[pageIndex] = buildPage(pageInput, reader.engine);
     } else {
       // remove
       const pageIndex = input.page_index as number | undefined;

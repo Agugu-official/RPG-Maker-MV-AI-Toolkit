@@ -1,6 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import type { HandlerContext } from "./types.js";
+import { RPGMakerValidator } from "../rpgmaker/validator.js";
 
 export async function handleReadAnimation(ctx: HandlerContext): Promise<string> {
   const { input, projectPath } = ctx;
@@ -35,7 +36,7 @@ export async function handleReadAnimation(ctx: HandlerContext): Promise<string> 
 }
 
 export async function handleEditAnimation(ctx: HandlerContext): Promise<string> {
-  const { input, writer, projectPath, changeLog } = ctx;
+  const { input, reader, writer, projectPath, changeLog } = ctx;
 
   try {
     const animationId = input.animation_id as number;
@@ -56,14 +57,51 @@ export async function handleEditAnimation(ctx: HandlerContext): Promise<string> 
     const changes: string[] = [];
 
     if (input.name !== undefined) { updates.name = input.name; changes.push(`name='${input.name}'`); }
-    if (input.effect_name !== undefined) { updates.effectName = input.effect_name; changes.push(`effectName='${input.effect_name}'`); }
-    if (input.display_type !== undefined) { updates.displayType = input.display_type; changes.push(`displayType=${input.display_type}`); }
-    if (input.offset_x !== undefined) { updates.offsetX = input.offset_x; changes.push(`offsetX=${input.offset_x}`); }
-    if (input.offset_y !== undefined) { updates.offsetY = input.offset_y; changes.push(`offsetY=${input.offset_y}`); }
-    if (input.speed !== undefined) { updates.speed = input.speed; changes.push(`speed=${input.speed}`); }
+
+    if (reader.engine === "mv") {
+      const mzFields = ["effect_name", "display_type", "offset_x", "offset_y", "speed", "flash_timings", "sound_timings"];
+      const usedMzFields = mzFields.filter((field) => input[field] !== undefined);
+      if (usedMzFields.length > 0) {
+        return JSON.stringify({ error: `MV animations do not support MZ fields: ${usedMzFields.join(", ")}` });
+      }
+      const mvUpdates: Record<string, unknown> = {};
+      const fieldMap: Array<[string, string]> = [
+        ["animation1_name", "animation1Name"],
+        ["animation1_hue", "animation1Hue"],
+        ["animation2_name", "animation2Name"],
+        ["animation2_hue", "animation2Hue"],
+        ["frames", "frames"],
+        ["position", "position"],
+        ["timings", "timings"],
+      ];
+      for (const [inputName, outputName] of fieldMap) {
+        if (input[inputName] !== undefined) mvUpdates[outputName] = input[inputName];
+      }
+      const candidate = { ...(animations[idx] as Record<string, unknown>), ...updates, ...mvUpdates };
+      const validation = RPGMakerValidator.validateAnimation(candidate, "mv");
+      if (!validation.valid) return JSON.stringify({ error: "Animation validation failed", errors: validation.errors });
+      Object.assign(updates, mvUpdates);
+      for (const name of Object.keys(mvUpdates)) changes.push(name);
+    } else {
+      const mvFields = ["animation1_name", "animation1_hue", "animation2_name", "animation2_hue", "frames", "position", "timings"];
+      const usedMvFields = mvFields.filter((field) => input[field] !== undefined);
+      if (usedMvFields.length > 0) {
+        return JSON.stringify({ error: `MZ animations do not support MV fields: ${usedMvFields.join(", ")}` });
+      }
+      if (input.effect_name !== undefined) { updates.effectName = input.effect_name; changes.push(`effectName='${input.effect_name}'`); }
+      if (input.display_type !== undefined) { updates.displayType = input.display_type; changes.push(`displayType=${input.display_type}`); }
+      if (input.offset_x !== undefined) { updates.offsetX = input.offset_x; changes.push(`offsetX=${input.offset_x}`); }
+      if (input.offset_y !== undefined) { updates.offsetY = input.offset_y; changes.push(`offsetY=${input.offset_y}`); }
+      if (input.speed !== undefined) { updates.speed = input.speed; changes.push(`speed=${input.speed}`); }
+      const candidate = { ...(animations[idx] as Record<string, unknown>), ...updates };
+      const validation = RPGMakerValidator.validateAnimation(candidate, "mz");
+      if (!validation.valid) return JSON.stringify({ error: "Animation validation failed", errors: validation.errors });
+    }
 
     if (changes.length === 0) {
-      return JSON.stringify({ error: "No fields to update. Provide at least one of: name, effect_name, display_type, offset_x, offset_y, speed" });
+      return JSON.stringify({ error: reader.engine === "mv"
+        ? "No fields to update. Provide at least one MV animation field"
+        : "No fields to update. Provide at least one MZ animation field" });
     }
 
     writer.updateAnimation(animationId, updates);

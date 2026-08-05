@@ -1,4 +1,5 @@
 import type { HandlerContext } from "./types.js";
+import { xhrPostGameStateStatement } from "../rpgmaker/runtime-script.js";
 
 function notConnected(): string {
   return JSON.stringify({ error: "Game not connected. Start the game with the RPGMakerDebugger plugin enabled." });
@@ -30,23 +31,18 @@ export async function handleGetActorRuntime(ctx: HandlerContext): Promise<string
         isAlive: actor.isAlive()
       };
     }
-    fetch('http://127.0.0.1:9001/gamestate', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({
+    ${xhrPostGameStateStatement(`({
         mapId: $gameMap ? $gameMap.mapId() : 0,
         playerX: $gamePlayer ? $gamePlayer.x : 0,
         playerY: $gamePlayer ? $gamePlayer.y : 0,
         switches: {},
         variables: {},
         queryResult: result
-      })
-    });
+      })`)}
   })();`;
 
   try {
-    const state = await ctx.debugBridge.waitForGameState(8000);
-    ctx.debugBridge.setCommand("execute_script", { code: script });
+    const state = await ctx.debugBridge.sendAndWaitForGameState("execute_script", { code: script }, 8000);
     const qr = (state as unknown as Record<string, unknown>).queryResult;
     if (qr === null) {
       return JSON.stringify({ error: `Actor ${actorId} not found in game` });

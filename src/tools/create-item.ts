@@ -3,7 +3,7 @@ import type { Tool } from "@modelcontextprotocol/sdk/types.js";
 export const CreateItemTool: Tool = {
   name: "create-item",
   description:
-    "Create a new item in the RPG Maker MZ database. The name is required; all other fields use " +
+    "Create a new item in the RPG Maker MV/MZ database. The name is required; all other fields use " +
     "sensible defaults (itype_id=1 regular item, consumable=true, scope=7 entire party, " +
     "occasion=0 always usable, successRate=100). Returns the new item_id.",
   inputSchema: {

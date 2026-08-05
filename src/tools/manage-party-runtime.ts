@@ -1,6 +1,6 @@
 export const ManagePartyRuntimeTool = {
   name: "manage-party-runtime",
-  description: "Manage the player party in a running RPG Maker MZ game: add or remove actors, or get the current party members",
+  description: "Manage the player party in a running RPG Maker MV/MZ game: add or remove actors, or get the current party members",
   inputSchema: {
     type: "object" as const,
     properties: {

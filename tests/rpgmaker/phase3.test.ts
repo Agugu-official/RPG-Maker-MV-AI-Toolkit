@@ -153,7 +153,7 @@ describe("RPGMakerWriter backup auto-prune", () => {
   });
 
   it("prunes old backups keeping only maxBackups most recent", () => {
-    const writer = new RPGMakerWriter({ projectPath: dir, createBackup: true, maxBackups: 3 });
+    const writer = new RPGMakerWriter({ projectPath: dir, createBackup: true, maxBackups: 3, engine: "mz" });
     // Write Actors.json 5 times → 5 backup files created
     for (let i = 0; i < 5; i++) {
       writer.updateActor(1, { name: `Hero${i}` });
@@ -165,7 +165,7 @@ describe("RPGMakerWriter backup auto-prune", () => {
   });
 
   it("does not prune when backup count is within limit", () => {
-    const writer = new RPGMakerWriter({ projectPath: dir, createBackup: true, maxBackups: 10 });
+    const writer = new RPGMakerWriter({ projectPath: dir, createBackup: true, maxBackups: 10, engine: "mz" });
     writer.updateActor(1, { name: "Hero1" });
     writer.updateActor(1, { name: "Hero2" });
 
@@ -200,32 +200,32 @@ describe("RPGMakerWriter writeMap MapInfos validation", () => {
   const validMapInfo = { id: 2, name: "Town", parentId: 0, order: 2, expanded: false, scrollX: 0, scrollY: 0 };
 
   it("writes map without mapInfo (no validation needed)", () => {
-    const writer = new RPGMakerWriter({ projectPath: dir, createBackup: false });
+    const writer = new RPGMakerWriter({ projectPath: dir, createBackup: false, engine: "mz" });
     expect(() => writer.writeMap(1, validMapData)).not.toThrow();
   });
 
   it("accepts valid mapInfo with all required fields", () => {
-    const writer = new RPGMakerWriter({ projectPath: dir, createBackup: false });
+    const writer = new RPGMakerWriter({ projectPath: dir, createBackup: false, engine: "mz" });
     writeJson(path.join(dir, "data", "MapInfos.json"), [null, null]);
     expect(() => writer.writeMap(2, validMapData, validMapInfo)).not.toThrow();
   });
 
   it("rejects mapInfo missing required fields", () => {
-    const writer = new RPGMakerWriter({ projectPath: dir, createBackup: false });
+    const writer = new RPGMakerWriter({ projectPath: dir, createBackup: false, engine: "mz" });
     writeJson(path.join(dir, "data", "MapInfos.json"), [null, null]);
     const badInfo = { id: 2, name: "Town" }; // missing parentId, order, expanded, scrollX, scrollY
     expect(() => writer.writeMap(2, validMapData, badInfo)).toThrow(/missing required fields/);
   });
 
   it("rejects mapInfo whose id does not match mapId", () => {
-    const writer = new RPGMakerWriter({ projectPath: dir, createBackup: false });
+    const writer = new RPGMakerWriter({ projectPath: dir, createBackup: false, engine: "mz" });
     writeJson(path.join(dir, "data", "MapInfos.json"), [null, null, null]);
     const wrongIdInfo = { id: 99, name: "Town", parentId: 0, order: 2, expanded: false, scrollX: 0, scrollY: 0 };
     expect(() => writer.writeMap(2, validMapData, wrongIdInfo)).toThrow(/mapInfo.id must equal/);
   });
 
   it("stores valid mapInfo in MapInfos.json at the correct index", () => {
-    const writer = new RPGMakerWriter({ projectPath: dir, createBackup: false });
+    const writer = new RPGMakerWriter({ projectPath: dir, createBackup: false, engine: "mz" });
     writeJson(path.join(dir, "data", "MapInfos.json"), [null]);
     writer.writeMap(2, validMapData, validMapInfo);
     const infos = readJson(path.join(dir, "data", "MapInfos.json")) as unknown[];
@@ -233,7 +233,7 @@ describe("RPGMakerWriter writeMap MapInfos validation", () => {
   });
 
   it("updates System.json versionId after writing a map", () => {
-    const writer = new RPGMakerWriter({ projectPath: dir, createBackup: false });
+    const writer = new RPGMakerWriter({ projectPath: dir, createBackup: false, engine: "mz" });
     const beforeVersion = (readJson(path.join(dir, "data", "System.json")) as { versionId: number }).versionId;
     writer.writeMap(1, validMapData);
     const afterVersion = (readJson(path.join(dir, "data", "System.json")) as { versionId: number }).versionId;

@@ -38,11 +38,11 @@ function defaultTroopConditions() {
   };
 }
 
-function buildTroopPage(page: TroopPageInput) {
+function buildTroopPage(page: TroopPageInput, engine: "mv" | "mz") {
   const conditions = { ...defaultTroopConditions(), ...(page.conditions ?? {}) };
   const span = page.span ?? 0;
 
-  const list = (page.commands ?? []).flatMap((cmd) => commandInputToEventCommands(cmd));
+  const list = (page.commands ?? []).flatMap((cmd) => commandInputToEventCommands(cmd, engine));
   list.push({ code: 0, indent: 0, parameters: [] });
 
   return { conditions, list, span };
@@ -76,7 +76,7 @@ export async function handleEditTroopEvents(ctx: HandlerContext): Promise<string
       return JSON.stringify({ error: "pages array is required for replace_all and append modes" });
     }
 
-    const builtPages = pageInputs.map(buildTroopPage);
+    const builtPages = pageInputs.map((page) => buildTroopPage(page, reader.engine));
 
     let finalPages: unknown[];
     if (mode === "replace_all") {

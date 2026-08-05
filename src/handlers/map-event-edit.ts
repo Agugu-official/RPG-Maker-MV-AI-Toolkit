@@ -56,7 +56,7 @@ export async function handleEditMapEvent(ctx: HandlerContext): Promise<string> {
         for (let i = list.length - 1; i >= 0; i--) {
           if ((list[i] as { code: number }).code === 0) { termIdx = i; break; }
         }
-        const newCmds = rawCmds.flatMap((c) => commandInputToEventCommands(c));
+        const newCmds = rawCmds.flatMap((c) => commandInputToEventCommands(c, reader.engine));
         if (termIdx >= 0) {
           list.splice(termIdx, 0, ...newCmds);
         } else {

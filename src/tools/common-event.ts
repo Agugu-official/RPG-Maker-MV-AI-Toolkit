@@ -1,18 +1,5 @@
 import type { Tool } from "@modelcontextprotocol/sdk/types.js";
-
-const commandSchema = {
-  type: "object",
-  description: "Event command (same format as create-map-event)",
-  properties: {
-    type: {
-      type: "string",
-      enum: ["message", "choice", "wait", "transfer", "script", "switch", "variable", "common-event", "battle", "animation"],
-      description: "Command type",
-    },
-    data: { type: "string", description: "Command payload (text, script code, etc.)" },
-  },
-  required: ["type"],
-};
+import { eventCommandSchema } from "./event-command-schema.js";
 
 export const CreateCommonEventTool: Tool = {
   name: "create-common-event",
@@ -36,7 +23,7 @@ export const CreateCommonEventTool: Tool = {
       commands: {
         type: "array",
         description: "List of event commands to execute",
-        items: commandSchema,
+        items: eventCommandSchema,
       },
     },
     required: ["name"],
@@ -69,7 +56,7 @@ export const EditCommonEventTool: Tool = {
       commands: {
         type: "array",
         description: "Replace the full command list",
-        items: commandSchema,
+        items: eventCommandSchema,
       },
     },
     required: ["event_id"],

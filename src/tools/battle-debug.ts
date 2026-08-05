@@ -9,7 +9,7 @@ export const SetupDebugPluginTool = {
 
 export const LaunchGameTool = {
   name: "launch-game",
-  description: "Launches the RPG Maker MZ game (not the editor). Requires RPGMAKER_EXECUTABLE_PATH configured. The user will need to press Play in the editor, or you can point to the NW.js executable for the game.",
+  description: "Launches the detected RPG Maker MV/MZ game (not the editor). Requires RPGMAKER_EXECUTABLE_PATH configured. The user will need to press Play in the editor, or you can point to the NW.js executable for the game.",
   inputSchema: {
     type: "object" as const,
     properties: {

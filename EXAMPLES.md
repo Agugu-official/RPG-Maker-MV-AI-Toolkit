@@ -1255,6 +1255,23 @@ Battle command quick reference:
 }
 ```
 
+**EN:** "Call the legacy MV LotteryPool command exactly as written."
+**ES:** "Llama exactamente al comando legacy MV LotteryPool."
+
+```json
+{
+  "map_id": 3,
+  "event_id": 5,
+  "append_commands": [
+    { "type": "plugin-command", "data": { "raw_command": "LotteryPool add 1" } }
+  ]
+}
+```
+
+For MV commands that are safe to tokenize, `command_name` plus `mv_args` is
+also supported. `raw_command` preserves spaces, backslashes, and the original
+command line; do not combine it with structured MV fields.
+
 **EN:** "Add a random encounter with slimes (enemy 1, weight 10) and goblins (enemy 3, weight 5) to map 2."
 **ES:** "Añade encuentros aleatorios con slimes (enemigo 1, peso 10) y goblins (enemigo 3, peso 5) al mapa 2."
 
@@ -2024,6 +2041,22 @@ Command types reference: `plugin-command` `save-bgm` `resume-bgm` `stop-se` `cha
 
 ```json
 { "animation_id": 65 }
+```
+
+MV animation data keeps the legacy two-image/frame format. For example, a
+blank MV animation can be created with one empty frame and no timing entries:
+
+```json
+{
+  "name": "MV Blank Burst",
+  "animation1_name": "",
+  "animation1_hue": 0,
+  "animation2_name": "",
+  "animation2_hue": 0,
+  "frames": [[]],
+  "position": 0,
+  "timings": []
+}
 ```
 
 ---

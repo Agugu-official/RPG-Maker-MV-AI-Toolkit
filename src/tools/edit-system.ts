@@ -90,7 +90,7 @@ export const EditSystemTool: Tool = {
       },
       opt_autosave: {
         type: "boolean",
-        description: "Enable autosave feature (optAutosave in System.json)",
+        description: "MZ only: enable autosave (optAutosave in System.json). MV projects reject this field.",
       },
       opt_display_tp: {
         type: "boolean",
@@ -106,7 +106,7 @@ export const EditSystemTool: Tool = {
       },
       opt_follower_distance: {
         type: "boolean",
-        description: "Keep followers at a distance on the map (optFollowerDistance in System.json)",
+        description: "MZ only: keep followers at a distance (optFollowerDistance in System.json). MV projects reject this field.",
       },
       opt_transparent: {
         type: "boolean",

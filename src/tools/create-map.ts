@@ -3,7 +3,7 @@ import type { Tool } from "@modelcontextprotocol/sdk/types.js";
 export const CreateMapTool: Tool = {
   name: "create-map",
   description:
-    "Create a new empty map in the RPG Maker MZ project. Writes MapXXX.json and registers the entry in MapInfos.json. If map_id is omitted the next available ID is chosen automatically.",
+    "Create a new empty map in the detected RPG Maker MV/MZ project. Writes MapXXX.json and registers the entry in MapInfos.json. If map_id is omitted the next available ID is chosen automatically.",
   inputSchema: {
     type: "object",
     properties: {

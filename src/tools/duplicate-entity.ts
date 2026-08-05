@@ -1,6 +1,6 @@
 export const DuplicateEntityTool = {
   name: "duplicate-entity",
-  description: "Duplicate an existing RPG Maker MZ entity (actor, item, skill, etc.) with a new name and auto-assigned ID",
+  description: "Duplicate an existing RPG Maker MV/MZ entity (actor, item, skill, etc.) with a new name and auto-assigned ID",
   inputSchema: {
     type: "object" as const,
     properties: {

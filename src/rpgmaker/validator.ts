@@ -1,8 +1,9 @@
 /**
- * Validador para datos de RPG Maker MZ
+ * Validator for shared RPG Maker MV/MZ data
  */
 
 import { Script } from "vm";
+import type { RPGMakerEngine } from "./engine.js";
 
 export interface ValidationResult {
   valid: boolean;
@@ -181,7 +182,7 @@ export class RPGMakerValidator {
   /**
    * Valida un fragmento de código JavaScript
    */
-  static validateJavaScript(code: string): ValidationResult {
+  static validateJavaScript(code: string, _engine?: RPGMakerEngine): ValidationResult {
     const errors: string[] = [];
     const warnings: string[] = [];
 
@@ -193,9 +194,9 @@ export class RPGMakerValidator {
     }
 
     // Warnings
-    if (!code.includes("PluginManager.register")) {
+    if (!code.includes("PluginManager.register") && !code.includes("Game_Interpreter.prototype.pluginCommand")) {
       warnings.push(
-        "Plugin code should contain 'PluginManager.register' for proper registration"
+        "Plugin code should contain PluginManager.register (MZ) or Game_Interpreter.prototype.pluginCommand (MV) for proper registration"
       );
     }
 
@@ -407,17 +408,48 @@ export class RPGMakerValidator {
     return { valid: errors.length === 0, errors, warnings };
   }
 
-  static validateAnimation(animation: Record<string, unknown>): ValidationResult {
+  static validateAnimation(animation: Record<string, unknown>, engine: RPGMakerEngine = "mz"): ValidationResult {
     const errors: string[] = [];
     const warnings: string[] = [];
     if (!animation.name || typeof animation.name !== "string") {
       errors.push("Animation must have a 'name' property");
     }
-    if (animation.frames !== undefined && !Array.isArray(animation.frames)) {
-      errors.push("Animation 'frames' must be an array");
-    }
-    if (animation.timings !== undefined && !Array.isArray(animation.timings)) {
-      errors.push("Animation 'timings' must be an array");
+    if (engine === "mv") {
+      const mzFields = ["effectName", "displayType", "offsetX", "offsetY", "speed", "flashTimings", "soundTimings"];
+      const usedMzFields = mzFields.filter((field) => animation[field] !== undefined);
+      if (usedMzFields.length > 0) {
+        errors.push(`MV animations do not support MZ fields: ${usedMzFields.join(", ")}`);
+      }
+      for (const field of ["animation1Name", "animation2Name"]) {
+        if (animation[field] !== undefined && typeof animation[field] !== "string") {
+          errors.push(`MV animation '${field}' must be a string`);
+        }
+      }
+      for (const field of ["animation1Hue", "animation2Hue", "position"]) {
+        if (animation[field] !== undefined && typeof animation[field] !== "number") {
+          errors.push(`MV animation '${field}' must be numeric`);
+        }
+      }
+      if (!Array.isArray(animation.frames) || animation.frames.length < 1) {
+        errors.push("MV animation 'frames' must contain at least one frame");
+      } else if (animation.frames.some((frame) => !Array.isArray(frame))) {
+        errors.push("MV animation frames must be arrays of cell data");
+      }
+      if (animation.timings !== undefined && !Array.isArray(animation.timings)) {
+        errors.push("MV animation 'timings' must be an array");
+      }
+    } else {
+      const mvFields = ["animation1Name", "animation1Hue", "animation2Name", "animation2Hue", "frames", "position", "timings"];
+      const usedMvFields = mvFields.filter((field) => animation[field] !== undefined);
+      if (usedMvFields.length > 0) {
+        errors.push(`MZ animations do not support MV fields: ${usedMvFields.join(", ")}`);
+      }
+      if (animation.flashTimings !== undefined && !Array.isArray(animation.flashTimings)) {
+        errors.push("MZ animation 'flashTimings' must be an array");
+      }
+      if (animation.soundTimings !== undefined && !Array.isArray(animation.soundTimings)) {
+        errors.push("MZ animation 'soundTimings' must be an array");
+      }
     }
     return { valid: errors.length === 0, errors, warnings };
   }

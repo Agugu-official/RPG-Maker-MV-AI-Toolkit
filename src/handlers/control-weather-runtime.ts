@@ -20,8 +20,8 @@ export async function handleControlWeatherRuntime(ctx: HandlerContext): Promise<
   const code = `$gameScreen.changeWeather('${type}', ${power}, ${duration});`;
 
   try {
-    await debugBridge.waitForAck(5000);
-    debugBridge.setCommand("execute_script", { code });
+    const ok = await debugBridge.sendAndWaitForAck("execute_script", { code }, 5000);
+    if (!ok) return JSON.stringify({ error: "Timed out waiting for game confirmation" });
     changeLog.append({ tool: "control-weather-runtime", entityType: "Screen", action: "update", summary: `Weather changed to '${type}' (power: ${power}, duration: ${duration}) at runtime` });
     return JSON.stringify({ success: true, type, power, duration });
   } catch (error) {

@@ -4,7 +4,7 @@ export const EditPluginParametersTool: Tool = {
   name: "edit-plugin-parameters",
   description:
     "Update the parameters object of a registered plugin in plugins.js. " +
-    "RPG Maker MZ stores all plugin parameter values as strings, even numeric ones. " +
+    "RPG Maker MV/MZ stores all plugin parameter values as strings, even numeric ones. " +
     "Partial updates are supported — only the keys you provide are changed; others are preserved.",
   inputSchema: {
     type: "object",

@@ -5,7 +5,7 @@
 export const EditActorTool = {
   name: "edit-actor",
   description:
-    "Create or edit an actor (playable character) in your RPG Maker MZ project",
+    "Create or edit an actor (playable character) in your RPG Maker MV/MZ project",
   inputSchema: {
     type: "object" as const,
     properties: {

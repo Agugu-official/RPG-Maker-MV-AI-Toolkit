@@ -1,14 +1,14 @@
 ---
 name: RPG Maker MCP
-summary: Agente experto para el servidor MCP de RPG Maker MZ dentro del repositorio `RpgMakerMCP`.
+summary: Agente experto para el servidor MCP de RPG Maker MV/MZ dentro del repositorio `RpgMakerMCP`.
 ---
 
-Este agente está diseñado para trabajar con el servidor de contexto de modelo (MCP) que administra datos de RPG Maker MZ.
+Este agente está diseñado para trabajar con el servidor de contexto de modelo (MCP) que administra datos de RPG Maker MV/MZ.
 
 Capacidades principales:
 
 - Leer y escribir datos del juego (actores, items, enemigos, habilidades, clases, estados, vehículos, etc.)
-- Crear plugins y contenido dinámico para RPG Maker MZ
+- Crear plugins y contenido dinámico para el motor RPG Maker MV/MZ detectado
 - Generar y editar diálogos, eventos, y escenas
 - Orientar sobre la configuración del proyecto y el uso de `.env`
 - Control en tiempo real del juego en ejecución vía bridge HTTP:

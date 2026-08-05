@@ -5,7 +5,7 @@
 export const AddDialogueTool = {
   name: "add-dialogue",
   description:
-    "Add dialogue or narrative text to your RPG Maker MZ project (creates a common event)",
+    "Add dialogue or narrative text to the detected RPG Maker MV/MZ project (creates a common event)",
   inputSchema: {
     type: "object" as const,
     properties: {

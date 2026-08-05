@@ -14,7 +14,7 @@ export async function handleCreateClass(ctx: HandlerContext): Promise<string> {
       (input.exp_acc_b as number | undefined) ?? 30,
     ];
 
-    // RPG Maker MZ stores params as 8 arrays (one per stat), each with 100 elements (one per level).
+    // MV/MZ stores params as 8 arrays (one per stat), each with 100 elements (one per level).
     // Default to all zeros — the editor fills growth curves from expParams.
     const params = Array.from({ length: 8 }, () => Array<number>(100).fill(0));
 

@@ -1,6 +1,6 @@
 export const GetActorRuntimeTool = {
   name: "get-actor-runtime",
-  description: "Get a live actor's runtime state from a running RPG Maker MZ game, including current HP, MP, TP, level, EXP, states, and buffs",
+  description: "Get a live actor's runtime state from a running RPG Maker MV/MZ game, including current HP, MP, TP, level, EXP, states, and buffs",
   inputSchema: {
     type: "object" as const,
     properties: {

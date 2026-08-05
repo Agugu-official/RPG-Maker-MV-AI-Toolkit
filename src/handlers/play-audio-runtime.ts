@@ -46,8 +46,8 @@ export async function handlePlayAudioRuntime(ctx: HandlerContext): Promise<strin
   }
 
   try {
-    await debugBridge.waitForAck(5000);
-    debugBridge.setCommand("execute_script", { code });
+    const ok = await debugBridge.sendAndWaitForAck("execute_script", { code }, 5000);
+    if (!ok) return JSON.stringify({ error: "Timed out waiting for game confirmation" });
     changeLog.append({ tool: "play-audio-runtime", entityType: "Audio", action: "update", summary: `Audio action '${type}'${name ? ` (${name})` : ""} executed at runtime` });
     return JSON.stringify({ success: true, type, name: name ?? null, volume, pitch, pan });
   } catch (error) {

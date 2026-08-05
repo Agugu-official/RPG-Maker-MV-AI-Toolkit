@@ -91,8 +91,8 @@ function createTempProject(): string {
 
 function makeCtx(dir: string, input: Record<string, unknown>): HandlerContext {
   return {
-    reader: new RPGMakerReader({ projectPath: dir }),
-    writer: new RPGMakerWriter({ projectPath: dir, createBackup: false }),
+    reader: new RPGMakerReader({ projectPath: dir, engine: "mz" }),
+    writer: new RPGMakerWriter({ projectPath: dir, createBackup: false, engine: "mz" }),
     input,
     projectPath: dir,
     debugBridge: new RPGMakerDebugBridge(),
@@ -463,13 +463,13 @@ describe("new commands (v3.0+)", () => {
     expect(cmds[0].parameters[5]).toBe("Actor1_SV_Armored"); // battler_name
   });
 
-  it("toggle-party-member produces code 340", () => {
+  it("toggle-party-member uses the official Change Party Member code 129", () => {
     const cmds = commandInputToEventCommands({
       type: "toggle-party-member",
       data: { actor_id: 3, enable: false },
     });
     expect(cmds).toHaveLength(1);
-    expect(cmds[0].code).toBe(340);
+    expect(cmds[0].code).toBe(129);
     expect(cmds[0].parameters[0]).toBe(3); // actor_id
     // enable: false → parameter[1] = 1 (disabled)
     expect(cmds[0].parameters[1]).toBe(1);

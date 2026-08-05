@@ -5,7 +5,6 @@ import type { Tool } from "@modelcontextprotocol/sdk/types.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import * as fs from "fs";
 import * as path from "path";
-import * as http from "http";
 import { z } from "zod";
 type ZodTypeAny = z.ZodTypeAny;
 
@@ -13,8 +12,10 @@ type ZodTypeAny = z.ZodTypeAny;
 import { RPGMakerReader } from "./rpgmaker/reader.js";
 import { RPGMakerWriter } from "./rpgmaker/writer.js";
 import { RPGMakerDebugBridge } from "./rpgmaker/debug-bridge.js";
-import type { BattleState, GameState } from "./rpgmaker/debug-bridge.js";
+import { createRPGMakerHttpBridge } from "./rpgmaker/http-bridge.js";
+import { getRPGMakerBridgePort } from "./rpgmaker/runtime-script.js";
 import { ChangeLog } from "./rpgmaker/change-log.js";
+import { detectProjectEngine, type RPGMakerProjectProfile } from "./rpgmaker/engine.js";
 
 // Tool definitions
 import { EditActorTool } from "./tools/edit-actor.js";
@@ -139,8 +140,9 @@ loadEnvFile();
 const RPGMAKER_PROJECT_PATH = process.env.RPGMAKER_PROJECT_PATH;
 const DEBUG = process.env.MCP_DEBUG === "true";
 const LOG_LEVEL = process.env.LOG_LEVEL || "info";
-const BRIDGE_PORT = 9001;
+const BRIDGE_PORT = getRPGMakerBridgePort();
 const MAX_BACKUPS = parseInt(process.env.BACKUP_MAX_COUNT || "10", 10);
+let projectProfile: RPGMakerProjectProfile | undefined;
 
 const logger = {
   debug: (msg: string, data?: unknown) => {
@@ -164,11 +166,21 @@ function validateSetup(): boolean {
   }
   const dataPath = path.join(RPGMAKER_PROJECT_PATH, "data");
   if (!fs.existsSync(dataPath)) {
-    logger.error(`RPG Maker data directory not found at: ${dataPath}. Is this a valid RPG Maker MZ project?`);
+    logger.error(`RPG Maker data directory not found at: ${dataPath}.`);
     return false;
   }
-  logger.info(`✓ RPG Maker project found at: ${RPGMAKER_PROJECT_PATH}`);
-  return true;
+  try {
+    projectProfile = detectProjectEngine(
+      RPGMAKER_PROJECT_PATH,
+      process.env.RPGMAKER_ENGINE as "auto" | "mv" | "mz" | undefined,
+    );
+    logger.info(`RPG Maker ${projectProfile.engine.toUpperCase()} project found at: ${RPGMAKER_PROJECT_PATH}`);
+    logger.debug("Project engine profile", projectProfile);
+    return true;
+  } catch (error) {
+    logger.error("RPG Maker engine detection failed", (error as Error).message);
+    return false;
+  }
 }
 
 // JSON Schema → Zod conversion (for tool registration)
@@ -179,19 +191,33 @@ type JsonSchemaProperty = {
   properties?: Record<string, JsonSchemaProperty>;
   items?: JsonSchemaProperty;
   required?: string[];
+  anyOf?: JsonSchemaProperty[];
+  additionalProperties?: JsonSchemaProperty | boolean;
 };
 type JsonObjectSchema = JsonSchemaProperty & { type: "object"; properties?: Record<string, JsonSchemaProperty>; required?: string[] };
 
 function jsonSchemaPropertyToZod(schema: JsonSchemaProperty): ZodTypeAny {
   let zodSchema: ZodTypeAny;
-  if (schema.enum && schema.enum.length > 0) {
+  if (schema.anyOf && schema.anyOf.length > 0) {
+    zodSchema = schema.anyOf.length === 1
+      ? jsonSchemaPropertyToZod(schema.anyOf[0])
+      : z.union(schema.anyOf.map(jsonSchemaPropertyToZod) as [ZodTypeAny, ZodTypeAny, ...ZodTypeAny[]]);
+  } else if (schema.enum && schema.enum.length > 0) {
     zodSchema = z.enum(schema.enum.map(String) as [string, ...string[]]);
   } else {
     switch (schema.type) {
       case "number": case "integer": zodSchema = z.number(); break;
       case "boolean": zodSchema = z.boolean(); break;
       case "array": zodSchema = z.array(schema.items ? jsonSchemaPropertyToZod(schema.items) : z.unknown()); break;
-      case "object": zodSchema = jsonSchemaToZod(schema as JsonObjectSchema); break;
+      case "object":
+        if (schema.additionalProperties && typeof schema.additionalProperties === "object") {
+          zodSchema = z.record(z.string(), jsonSchemaPropertyToZod(schema.additionalProperties));
+        } else if (schema.additionalProperties === true || (!schema.properties && schema.additionalProperties !== false)) {
+          zodSchema = z.record(z.string(), z.unknown());
+        } else {
+          zodSchema = jsonSchemaToZod(schema as JsonObjectSchema);
+        }
+        break;
       default: zodSchema = z.string();
     }
   }
@@ -367,13 +393,18 @@ async function handleToolCall(toolName: string, toolInput: Record<string, unknow
     return JSON.stringify({ error: `Unknown tool: ${toolName}` });
   }
 
-  const reader = new RPGMakerReader({ projectPath: RPGMAKER_PROJECT_PATH!, debug: DEBUG });
-  const writer = new RPGMakerWriter({ projectPath: RPGMAKER_PROJECT_PATH!, createBackup: true, debug: DEBUG, maxBackups: MAX_BACKUPS });
+  if (!projectProfile) {
+    return JSON.stringify({ error: "RPG Maker project profile is not initialized" });
+  }
+
+  const reader = new RPGMakerReader({ projectPath: RPGMAKER_PROJECT_PATH!, debug: DEBUG, engine: projectProfile.engine });
+  const writer = new RPGMakerWriter({ projectPath: RPGMAKER_PROJECT_PATH!, createBackup: true, debug: DEBUG, maxBackups: MAX_BACKUPS, engine: projectProfile.engine });
   changeLog ??= new ChangeLog(RPGMAKER_PROJECT_PATH!);
 
   const ctx: HandlerContext = {
     reader,
     writer,
+    profile: projectProfile,
     input: toolInput,
     projectPath: RPGMAKER_PROJECT_PATH!,
     debugBridge,
@@ -409,50 +440,7 @@ async function main() {
   }
 
   // HTTP bridge for game plugin communication
-  const httpServer = http.createServer((req, res) => {
-    res.setHeader("Access-Control-Allow-Origin", "*");
-    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-
-    if (req.method === "OPTIONS") { res.writeHead(204); res.end(); return; }
-
-    const url = req.url || "/";
-
-    if (req.method === "GET" && url === "/ping") {
-      debugBridge.markConnected();
-      const cmd = debugBridge.getCommand();
-      if (cmd) { res.writeHead(200, { "Content-Type": "application/json" }); res.end(JSON.stringify(cmd)); }
-      else { res.writeHead(204); res.end(); }
-      return;
-    }
-
-    if (req.method === "POST" && (url === "/log" || url === "/state" || url === "/gamestate" || url === "/ack")) {
-      let body = "";
-      req.on("data", (c) => (body += c));
-      req.on("end", () => {
-        try {
-          const data = JSON.parse(body);
-          if (url === "/log") {
-            debugBridge.addEvent(data);
-          } else if (url === "/state") {
-            const state = data as BattleState;
-            if (!state.inBattle || state.battleOver) debugBridge.setFinalState(state);
-          } else if (url === "/gamestate") {
-            debugBridge.setGameState(data as GameState);
-          } else if (url === "/ack") {
-            debugBridge.resolveAck();
-          }
-          res.writeHead(200, { "Content-Type": "application/json" });
-          res.end(JSON.stringify({ status: "ok" }));
-        } catch {
-          res.writeHead(400); res.end("{}");
-        }
-      });
-      return;
-    }
-
-    res.writeHead(404); res.end();
-  });
+  const httpServer = createRPGMakerHttpBridge(debugBridge);
 
   httpServer.listen(BRIDGE_PORT, "127.0.0.1", () => {
     logger.info(`✓ Game bridge HTTP on port ${BRIDGE_PORT}`);

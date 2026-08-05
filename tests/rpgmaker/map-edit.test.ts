@@ -46,8 +46,8 @@ function createTempProject(): string {
 
 function makeCtx(dir: string, input: Record<string, unknown>): HandlerContext {
   return {
-    reader: new RPGMakerReader({ projectPath: dir }),
-    writer: new RPGMakerWriter({ projectPath: dir, createBackup: false }),
+    reader: new RPGMakerReader({ projectPath: dir, engine: "mz" }),
+    writer: new RPGMakerWriter({ projectPath: dir, createBackup: false, engine: "mz" }),
     input,
     projectPath: dir,
     debugBridge: new RPGMakerDebugBridge(),

@@ -1,4 +1,5 @@
 import type { Tool } from "@modelcontextprotocol/sdk/types.js";
+import { eventCommandSchema } from "./event-command-schema.js";
 
 export const EditTroopEventsTool: Tool = {
   name: "edit-troop-events",
@@ -49,17 +50,7 @@ export const EditTroopEventsTool: Tool = {
             commands: {
               type: "array",
               description: "Event commands to execute. Same format as create-map-event: [{type, data}]",
-              items: {
-                type: "object",
-                properties: {
-                  type: {
-                    type: "string",
-                    enum: ["message", "choice", "wait", "transfer", "script", "switch", "variable", "common-event", "battle", "animation"],
-                  },
-                  data: { type: "string" },
-                },
-                required: ["type"],
-              },
+              items: eventCommandSchema,
             },
           },
         },

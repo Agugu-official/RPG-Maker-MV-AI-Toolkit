@@ -6,13 +6,14 @@ Guide for AI agents (and human contributors) working on this codebase.
 
 ## Project at a glance
 
-An MCP server written in **TypeScript ESM** (Node 20+, `"type": "module"`, `.js` extensions in all imports). It exposes **57 tools** that read and write RPG Maker MZ project JSON files, plus a runtime control bridge for live game manipulation. Each tool call is stateless — the server creates a fresh Reader/Writer per call.
+An MCP server written in **TypeScript ESM** (Node 20+, `"type": "module"`, `.js` extensions in all imports). It exposes **57 tools** that read and write RPG Maker MV/MZ project JSON files, plus a runtime control bridge for live game manipulation. Each tool call is stateless — the server creates a fresh Reader/Writer per call.
 
 Key invariants:
 - **Never throw from a handler** — always return `JSON.stringify({ error: … })`.
 - **Backups before every write** — `RPGMakerWriter` creates a timestamped backup automatically.
 - **Validate before writing** — use `RPGMakerValidator` at the handler boundary; return error JSON if invalid.
 - **Append to change log** — every successful write calls `ctx.changeLog.append(…)`.
+- **Use the detected profile** — `ctx.profile.engine`, `ctx.reader.engine`, and `ctx.writer.engine` identify MV or MZ for format-sensitive operations.
 
 ---
 
@@ -173,11 +174,14 @@ CI runs on Node 20 and 22 via `.github/workflows/ci.yml`.
 
 ## Runtime read pattern
 
-`get-switch`, `get-variable`, and `get-inventory` cannot return values via the normal ACK flow. Instead, the handler builds a JS snippet that calls `fetch('http://127.0.0.1:9001/gamestate', { method:'POST', body: JSON.stringify({ ...standardState, queryResult: <value> }) })` inside the game. Then the handler calls `debugBridge.waitForGameState()`, which resolves with the full payload including `queryResult`. Access it as:
+`get-switch`, `get-variable`, and `get-inventory` cannot return values via the normal ACK flow. Instead, the handler builds a JavaScript snippet that uses synchronous `XMLHttpRequest` to post `{ ...standardState, queryResult: <value> }` to `http://127.0.0.1:9001/gamestate` inside the game. Arm the state waiter before publishing the command:
 
 ```typescript
-debugBridge.setCommand("execute_script", { code: script });
-const state = await debugBridge.waitForGameState(8000);
+const state = await debugBridge.sendAndWaitForGameState(
+  "execute_script",
+  { code: script },
+  8000,
+);
 const qr = (state as unknown as Record<string, unknown>).queryResult;
 ```
 
@@ -196,8 +200,8 @@ The `queryResult` field is not declared in `GameState`; cast via `as unknown as 
 | Writing to `MapInfos.json` without the 7 required fields | `writer.writeMap` will throw before touching the file |
 | Plugin filenames with `..` or special chars | `writer.writePlugin` throws; sanitize before calling |
 | Adding `"batch-edit"` to `registry.ts` | Creates circular import — add it only in `index.ts` |
-| Using `waitForAck` for runtime read tools | ACK doesn't carry a return value — use `waitForGameState` with the fetch-into-gamestate pattern |
-| Calling `waitForGameState` after `setCommand` | Race: game may respond before the poll loop starts — call `waitForGameState` first |
+| Using `waitForAck` for runtime read tools | ACK doesn't carry a return value — use XHR plus `sendAndWaitForGameState` |
+| Calling `setCommand` before arming a waiter | Race: MV/MZ can respond before the poll loop starts — use `sendAndWaitForAck`, `sendAndWaitForGameState`, or `sendAndWaitForBattle` |
 
 ---
 
@@ -205,8 +209,10 @@ The `queryResult` field is not declared in `GameState`; cast via `as unknown as 
 
 | Variable | Default | Description |
 |---|---|---|
-| `RPGMAKER_PROJECT_PATH` | *(required)* | Absolute path to RPG Maker MZ project root |
-| `RPGMAKER_EXECUTABLE_PATH` | — | Path to RPGMakerMZ.exe (for `launch-game`) |
+| `RPGMAKER_PROJECT_PATH` | *(required)* | Absolute path to RPG Maker MV/MZ project root |
+| `RPGMAKER_ENGINE` | `auto` | `auto`, `mv`, or `mz`; auto-detects official runtime marker files |
+| `RPGMAKER_EXECUTABLE_PATH` | — | Path to the configured RPG Maker MV/MZ executable (for `launch-game`) |
+| `RPGMAKER_BRIDGE_PORT` | `9001` | HTTP bridge port shared by the server, debug plugin, and runtime query scripts |
 | `MCP_DEBUG` | `false` | Enable verbose debug logging |
 | `LOG_LEVEL` | `info` | `debug` \| `info` \| `warn` \| `error` |
 | `BACKUP_MAX_COUNT` | `10` | Max backup files kept per JSON file |

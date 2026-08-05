@@ -149,6 +149,39 @@ export class RPGMakerDebugBridge {
     });
   }
 
+  /** Arm the ACK waiter before publishing a command to avoid fast-response races. */
+  async sendAndWaitForAck(
+    command: string,
+    args: Record<string, unknown> = {},
+    timeout = 10000,
+  ): Promise<boolean> {
+    const result = this.waitForAck(timeout);
+    this.setCommand(command, args);
+    return result;
+  }
+
+  /** Arm the state waiter before publishing a query command. */
+  async sendAndWaitForGameState(
+    command: string,
+    args: Record<string, unknown> = {},
+    timeout = 10000,
+  ): Promise<GameState> {
+    const result = this.waitForGameState(timeout);
+    this.setCommand(command, args);
+    return result;
+  }
+
+  /** Arm the battle waiter before publishing a battle command. */
+  async sendAndWaitForBattle(
+    command: string,
+    args: Record<string, unknown> = {},
+    timeout = 120000,
+  ): Promise<EncounterResult> {
+    const result = this.waitForBattle(timeout);
+    this.setCommand(command, args);
+    return result;
+  }
+
   private generateSummary(state: BattleState): string {
     const parts: string[] = [];
     if (state.actors?.length > 0) {

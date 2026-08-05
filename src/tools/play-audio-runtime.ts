@@ -1,6 +1,6 @@
 export const PlayAudioRuntimeTool = {
   name: "play-audio-runtime",
-  description: "Play or stop audio (BGM, BGS, SE, ME) in a running RPG Maker MZ game",
+  description: "Play or stop audio (BGM, BGS, SE, ME) in a running RPG Maker MV/MZ game",
   inputSchema: {
     type: "object" as const,
     properties: {

@@ -1,10 +1,9 @@
 import * as fs from "fs";
 import * as path from "path";
 import { RPGMakerValidator } from "../rpgmaker/validator.js";
+import { getRPGMakerBridgePort } from "../rpgmaker/runtime-script.js";
 import { PluginTemplates } from "../templates/plugin-template.js";
 import type { HandlerContext } from "./types.js";
-
-const BRIDGE_PORT = 9001;
 
 function generatePluginCode(
   pluginName: string,
@@ -12,9 +11,11 @@ function generatePluginCode(
   author: string,
   version: string,
   codeType: string,
+  engine: "mv" | "mz",
 ): string {
+  const target = engine === "mv" ? "MV" : "MZ";
   const header = `/*:
- * @target MZ
+ * @target ${target}
  * @plugindesc ${description}
  * @author ${author}
  * @version ${version}
@@ -43,7 +44,17 @@ function generatePluginCode(
 `;
       break;
     case "command":
-      body = `
+      body = engine === "mv"
+        ? `
+  const _Game_Interpreter_pluginCommand = Game_Interpreter.prototype.pluginCommand;
+  Game_Interpreter.prototype.pluginCommand = function(command, args) {
+    _Game_Interpreter_pluginCommand.call(this, command, args);
+    if (command === pluginName && args && args[0] === "exampleCommand") {
+      console.log("Example command executed with args:", args.slice(1));
+    }
+  };
+`
+        : `
   PluginManager.registerCommand(pluginName, "exampleCommand", args => {
     console.log("Example command executed with args:", args);
   });
@@ -87,16 +98,16 @@ function registerPlugin(
 }
 
 export async function handleCreatePlugin(ctx: HandlerContext): Promise<string> {
-  const { input, writer, projectPath } = ctx;
+  const { input, reader, writer, projectPath } = ctx;
   const pluginName = input.plugin_name as string;
   const description = input.description as string;
   const author = (input.author as string | undefined) || "Unknown";
   const version = (input.version as string | undefined) || "1.0.0";
   const codeType = (input.code_type as string) || "empty";
 
-  const pluginCode = generatePluginCode(pluginName, description, author, version, codeType);
+  const pluginCode = generatePluginCode(pluginName, description, author, version, codeType, reader.engine);
 
-  const validation = RPGMakerValidator.validateJavaScript(pluginCode);
+  const validation = RPGMakerValidator.validateJavaScript(pluginCode, reader.engine);
   if (!validation.valid) {
     return JSON.stringify({ error: "Plugin code validation failed", errors: validation.errors });
   }
@@ -119,7 +130,7 @@ export async function handleCreatePlugin(ctx: HandlerContext): Promise<string> {
 }
 
 export async function handleCreatePluginAdvanced(ctx: HandlerContext): Promise<string> {
-  const { input, writer } = ctx;
+  const { input, reader, writer } = ctx;
   const pluginName = input.plugin_name as string;
   const description = input.description as string;
   const author = (input.author as string | undefined) || "Unknown";
@@ -132,25 +143,25 @@ export async function handleCreatePluginAdvanced(ctx: HandlerContext): Promise<s
   try {
     switch (templateType) {
       case "with-parameters":
-        pluginCode = PluginTemplates.withParameters(pluginName, description, author, version, parameters || []);
+        pluginCode = PluginTemplates.withParameters(pluginName, description, author, version, parameters || [], reader.engine);
         break;
       case "game-actor":
-        pluginCode = PluginTemplates.gameActorExtension(pluginName, description, author, version);
+        pluginCode = PluginTemplates.gameActorExtension(pluginName, description, author, version, reader.engine);
         break;
       case "game-enemy":
-        pluginCode = PluginTemplates.gameEnemyExtension(pluginName, description, author, version);
+        pluginCode = PluginTemplates.gameEnemyExtension(pluginName, description, author, version, reader.engine);
         break;
       case "event-handler":
-        pluginCode = PluginTemplates.eventHandler(pluginName, description, author, version);
+        pluginCode = PluginTemplates.eventHandler(pluginName, description, author, version, reader.engine);
         break;
       case "custom-ui":
-        pluginCode = PluginTemplates.customUI(pluginName, description, author, version);
+        pluginCode = PluginTemplates.customUI(pluginName, description, author, version, reader.engine);
         break;
       default:
         return JSON.stringify({ error: `Unknown template type: ${templateType}` });
     }
 
-    const validation = RPGMakerValidator.validateJavaScript(pluginCode);
+    const validation = RPGMakerValidator.validateJavaScript(pluginCode, reader.engine);
     if (!validation.valid) {
       return JSON.stringify({ error: "Plugin validation failed", errors: validation.errors });
     }
@@ -172,12 +183,13 @@ export async function handleCreatePluginAdvanced(ctx: HandlerContext): Promise<s
 }
 
 export async function handleSetupDebugPlugin(ctx: HandlerContext): Promise<string> {
-  const { writer, projectPath } = ctx;
+  const { reader, writer, projectPath } = ctx;
+  const bridgePort = getRPGMakerBridgePort();
 
   try {
-    const pluginCode = PluginTemplates.debugBridge(BRIDGE_PORT);
+    const pluginCode = PluginTemplates.debugBridge(bridgePort, reader.engine);
 
-    const validation = RPGMakerValidator.validateJavaScript(pluginCode);
+    const validation = RPGMakerValidator.validateJavaScript(pluginCode, reader.engine);
     if (!validation.valid) {
       return JSON.stringify({ error: "Plugin validation failed", errors: validation.errors });
     }
@@ -224,19 +236,19 @@ export async function handleSetupDebugPlugin(ctx: HandlerContext): Promise<strin
       tool: "setup-debug-plugin",
       entityType: "Plugin",
       action,
-      summary: `Debug bridge plugin installed on port ${BRIDGE_PORT}; synced ${newlyRegistered.length} additional plugins`,
+      summary: `Debug bridge plugin installed on port ${bridgePort}; synced ${newlyRegistered.length} additional plugins`,
     });
 
     return JSON.stringify({
       success: true,
       message: alreadyRegistered
-        ? `Debug plugin updated (port ${BRIDGE_PORT})`
-        : `Debug plugin installed (port ${BRIDGE_PORT})`,
+        ? `Debug plugin updated (port ${bridgePort})`
+        : `Debug plugin installed (port ${bridgePort})`,
       filename,
-      port: BRIDGE_PORT,
+      port: bridgePort,
       synced_plugins: newlyRegistered,
       instructions: [
-        "1. Close and reopen the project in RPG Maker MZ editor (so it picks up the changes)",
+        `1. Close and reopen the RPG Maker ${reader.engine.toUpperCase()} project (so it picks up the changes)`,
         "2. Open Plugin Manager — RPGMakerDebugger is enabled; other plugins appear disabled (activate as needed)",
         "3. Press Play (F5) to launch the game",
         "4. Use 'start-encounter' or other runtime tools — the game connects automatically",

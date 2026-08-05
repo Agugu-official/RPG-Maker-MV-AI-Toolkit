@@ -106,8 +106,7 @@ export async function handleStartEncounter(ctx: HandlerContext): Promise<string>
   const actionQueue = (input.actions as unknown[][] | undefined) ?? [];
 
   try {
-    debugBridge.setCommand("start_battle", { troopId: resolvedTroopId, actionQueue });
-    const result = await debugBridge.waitForBattle(120000);
+    const result = await debugBridge.sendAndWaitForBattle("start_battle", { troopId: resolvedTroopId, actionQueue }, 120000);
 
     return JSON.stringify({
       success: result.success,
@@ -125,8 +124,7 @@ export async function handleGetGameState(ctx: HandlerContext): Promise<string> {
   if (!debugBridge.connected) return notConnected();
 
   try {
-    debugBridge.setCommand("get_state", {});
-    const state = await debugBridge.waitForGameState(10000);
+    const state = await debugBridge.sendAndWaitForGameState("get_state", {}, 10000);
     return JSON.stringify({ success: true, state });
   } catch (error) {
     return JSON.stringify({ error: (error as Error).message });
@@ -141,8 +139,7 @@ export async function handleSetSwitch(ctx: HandlerContext): Promise<string> {
   const value = input.value as boolean;
 
   try {
-    debugBridge.setCommand("set_switch", { id, value });
-    const ok = await debugBridge.waitForAck(10000);
+    const ok = await debugBridge.sendAndWaitForAck("set_switch", { id, value }, 10000);
     if (!ok) return JSON.stringify({ error: "Timed out waiting for game to confirm set_switch" });
     ctx.changeLog.append({ tool: "set-switch", entityType: "Switch", entityId: id, action: "update", summary: `Switch ${id} = ${value}` });
     return JSON.stringify({ success: true, switch_id: id, value });
@@ -159,8 +156,7 @@ export async function handleSetVariable(ctx: HandlerContext): Promise<string> {
   const value = input.value;
 
   try {
-    debugBridge.setCommand("set_variable", { id, value });
-    const ok = await debugBridge.waitForAck(10000);
+    const ok = await debugBridge.sendAndWaitForAck("set_variable", { id, value }, 10000);
     if (!ok) return JSON.stringify({ error: "Timed out waiting for game to confirm set_variable" });
     ctx.changeLog.append({ tool: "set-variable", entityType: "Variable", entityId: id, action: "update", summary: `Variable ${id} = ${JSON.stringify(value)}` });
     return JSON.stringify({ success: true, variable_id: id, value });
@@ -179,8 +175,7 @@ export async function handleTeleportPlayer(ctx: HandlerContext): Promise<string>
   const direction = (input.direction as number | undefined) ?? 0;
 
   try {
-    debugBridge.setCommand("teleport", { mapId, x, y, direction });
-    const ok = await debugBridge.waitForAck(10000);
+    const ok = await debugBridge.sendAndWaitForAck("teleport", { mapId, x, y, direction }, 10000);
     if (!ok) return JSON.stringify({ error: "Timed out waiting for game to confirm teleport" });
     ctx.changeLog.append({ tool: "teleport-player", entityType: "Player", action: "update", summary: `Teleported to map ${mapId} (${x}, ${y})` });
     return JSON.stringify({ success: true, map_id: mapId, x, y, direction });
@@ -207,8 +202,7 @@ export async function handleSetPartyState(ctx: HandlerContext): Promise<string> 
     return JSON.stringify({ error: "mp_percent must be between 0.0 and 1.0" });
 
   try {
-    debugBridge.setCommand("set_party_state", { actor_id, hp_percent, mp_percent, add_states, remove_states });
-    const ok = await debugBridge.waitForAck(10000);
+    const ok = await debugBridge.sendAndWaitForAck("set_party_state", { actor_id, hp_percent, mp_percent, add_states, remove_states }, 10000);
     if (!ok) return JSON.stringify({ error: "Timed out waiting for game to confirm set_party_state" });
     const target = actor_id ? `actor ${actor_id}` : "all party members";
     const changes: string[] = [];
@@ -230,9 +224,8 @@ export async function handleLoadGame(ctx: HandlerContext): Promise<string> {
   const slot = (input.slot as number | undefined) ?? 98;
 
   try {
-    debugBridge.setCommand("load_game", { slot });
     // wait for the map to report back (loading takes longer than a simple ack)
-    const state = await debugBridge.waitForGameState(20000);
+    const state = await debugBridge.sendAndWaitForGameState("load_game", { slot }, 20000);
     ctx.changeLog.append({ tool: "load-game", entityType: "SaveFile", entityId: slot, action: "update", summary: `Game loaded from slot ${slot}` });
     return JSON.stringify({ success: true, slot, state });
   } catch (error) {
@@ -247,8 +240,7 @@ export async function handleSaveGame(ctx: HandlerContext): Promise<string> {
   const slot = (input.slot as number | undefined) ?? 98;
 
   try {
-    debugBridge.setCommand("save_game", { slot });
-    const ok = await debugBridge.waitForAck(10000);
+    const ok = await debugBridge.sendAndWaitForAck("save_game", { slot }, 10000);
     if (!ok) return JSON.stringify({ error: "Timed out waiting for game to confirm save" });
     ctx.changeLog.append({ tool: "save-game", entityType: "SaveFile", entityId: slot, action: "create", summary: `Game saved to slot ${slot}` });
     return JSON.stringify({ success: true, slot });
@@ -267,8 +259,7 @@ export async function handleExecuteScript(ctx: HandlerContext): Promise<string> 
   const timeout = (input.timeout as number | undefined) ?? 5000;
 
   try {
-    debugBridge.setCommand("execute_script", { code });
-    const ok = await debugBridge.waitForAck(timeout);
+    const ok = await debugBridge.sendAndWaitForAck("execute_script", { code }, timeout);
     if (!ok) return JSON.stringify({ error: "Timed out waiting for game to confirm script execution" });
     changeLog.append({ tool: "execute-script", entityType: "Script", action: "update", summary: `Script executed: ${code.slice(0, 80)}` });
     return JSON.stringify({ success: true, code });
@@ -287,8 +278,7 @@ export async function handleShowMessage(ctx: HandlerContext): Promise<string> {
   const speaker = (input.speaker as string | undefined) ?? "";
 
   try {
-    debugBridge.setCommand("show_message", { text, speaker });
-    const ok = await debugBridge.waitForAck(10000);
+    const ok = await debugBridge.sendAndWaitForAck("show_message", { text, speaker }, 10000);
     if (!ok) return JSON.stringify({ error: "Timed out waiting for game to confirm show_message" });
     changeLog.append({ tool: "show-message", entityType: "Message", action: "update", summary: `Message shown: "${text.slice(0, 60)}"` });
     return JSON.stringify({ success: true, text, speaker });
@@ -394,15 +384,13 @@ export async function handleRunBattleSuite(ctx: HandlerContext): Promise<string>
   try {
     for (let i = 0; i < runs; i++) {
       // Restore party state before each run
-      debugBridge.setCommand("set_party_state", partyState);
-      const ackOk = await debugBridge.waitForAck(10000);
+      const ackOk = await debugBridge.sendAndWaitForAck("set_party_state", partyState, 10000);
       if (!ackOk) return JSON.stringify({ error: `Run ${i + 1}/${runs}: timed out restoring party state` });
 
       await new Promise<void>((r) => setTimeout(r, 200));
 
       // Run battle
-      debugBridge.setCommand("start_battle", { troopId: resolvedTroopId, actionQueue: actions });
-      const result = await debugBridge.waitForBattle(120000);
+      const result = await debugBridge.sendAndWaitForBattle("start_battle", { troopId: resolvedTroopId, actionQueue: actions }, 120000);
       if (!result.success) return JSON.stringify({ error: `Run ${i + 1}/${runs} failed: ${result.summary}` });
 
       results.push(result);

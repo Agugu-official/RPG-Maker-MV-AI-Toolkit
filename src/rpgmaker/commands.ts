@@ -1,4 +1,5 @@
 import type { RPGEventCommand, RPGEventPage } from "../types/rpgmaker.js";
+import type { RPGMakerEngine } from "./engine.js";
 
 export type MapEventCommandInput = {
   type:
@@ -100,6 +101,7 @@ export type MapEventCommandInput = {
     | "toggle-party-member"
     | "change-enemy-hp"
     | "change-enemy-mp"
+    | "change-enemy-tp"
     | "change-enemy-state"
     | "recover-all-enemies"
     | "enemy-appear"
@@ -173,7 +175,10 @@ export function actionCommands(action?: string): RPGEventCommand[] {
   }
 }
 
-export function commandInputToEventCommands(command: MapEventCommandInput): RPGEventCommand[] {
+export function commandInputToEventCommands(
+  command: MapEventCommandInput,
+  engine: RPGMakerEngine = "mz",
+): RPGEventCommand[] {
   const rawData = command.data ?? "";
   // Resolve a string value for commands that still use plain string data
   const data = typeof rawData === "string" ? rawData : "";
@@ -278,63 +283,75 @@ export function commandInputToEventCommands(command: MapEventCommandInput): RPGE
 
     case "change-gold": {
       const operation = String(obj["operation"] ?? "add") === "remove" ? 1 : 0;
+      const operand_type = Number(obj["operand_type"] ?? 0);
       const amount = Number(obj["amount"] ?? 0);
-      return [{ code: 125, indent: 0, parameters: [0, 0, operation, amount] }];
+      return [{ code: 125, indent: 0, parameters: [operation, operand_type, amount] }];
     }
 
     case "change-item": {
       const item_id = Number(obj["item_id"] ?? 1);
       const operation = String(obj["operation"] ?? "add") === "remove" ? 1 : 0;
+      const operand_type = Number(obj["operand_type"] ?? 0);
       const amount = Number(obj["amount"] ?? 1);
-      return [{ code: 126, indent: 0, parameters: [item_id, operation, 0, amount] }];
+      return [{ code: 126, indent: 0, parameters: [item_id, operation, operand_type, amount] }];
     }
 
     case "change-weapon": {
       const weapon_id = Number(obj["weapon_id"] ?? 1);
       const operation = String(obj["operation"] ?? "add") === "remove" ? 1 : 0;
+      const operand_type = Number(obj["operand_type"] ?? 0);
       const amount = Number(obj["amount"] ?? 1);
       const include_equip = Boolean(obj["include_equip"] ?? false);
-      return [{ code: 127, indent: 0, parameters: [weapon_id, operation, 0, amount, include_equip] }];
+      return [{ code: 127, indent: 0, parameters: [weapon_id, operation, operand_type, amount, include_equip] }];
     }
 
     case "change-armor": {
       const armor_id = Number(obj["armor_id"] ?? 1);
       const operation = String(obj["operation"] ?? "add") === "remove" ? 1 : 0;
+      const operand_type = Number(obj["operand_type"] ?? 0);
       const amount = Number(obj["amount"] ?? 1);
       const include_equip = Boolean(obj["include_equip"] ?? false);
-      return [{ code: 128, indent: 0, parameters: [armor_id, operation, 0, amount, include_equip] }];
+      return [{ code: 128, indent: 0, parameters: [armor_id, operation, operand_type, amount, include_equip] }];
     }
 
     case "add-party-member": {
       const actor_id = Number(obj["actor_id"] ?? 1);
-      return [{ code: 129, indent: 0, parameters: [actor_id, 0] }];
+      const initialize = Boolean(obj["initialize"] ?? true);
+      return [{ code: 129, indent: 0, parameters: [actor_id, 0, initialize] }];
     }
 
     case "remove-party-member": {
       const actor_id = Number(obj["actor_id"] ?? 1);
-      return [{ code: 129, indent: 0, parameters: [actor_id, 1] }];
+      const initialize = Boolean(obj["initialize"] ?? false);
+      return [{ code: 129, indent: 0, parameters: [actor_id, 1, initialize] }];
     }
 
     case "change-hp": {
+      const actor_spec = Number(obj["actor_spec"] ?? 0);
       const actor_id = Number(obj["actor_id"] ?? 0);
       const operation = String(obj["operation"] ?? "add") === "remove" ? 1 : 0;
+      const operand_type = Number(obj["operand_type"] ?? 0);
       const amount = Number(obj["amount"] ?? 0);
       const allow_death = Boolean(obj["allow_death"] ?? false);
-      return [{ code: 311, indent: 0, parameters: [0, actor_id, 0, 0, operation, amount, allow_death] }];
+      return [{ code: 311, indent: 0, parameters: [actor_spec, actor_id, operation, operand_type, amount, allow_death] }];
     }
 
     case "change-mp": {
+      const actor_spec = Number(obj["actor_spec"] ?? 0);
       const actor_id = Number(obj["actor_id"] ?? 0);
       const operation = String(obj["operation"] ?? "add") === "remove" ? 1 : 0;
+      const operand_type = Number(obj["operand_type"] ?? 0);
       const amount = Number(obj["amount"] ?? 0);
-      return [{ code: 312, indent: 0, parameters: [0, actor_id, 0, 0, operation, amount] }];
+      return [{ code: 312, indent: 0, parameters: [actor_spec, actor_id, operation, operand_type, amount] }];
     }
 
     case "change-tp": {
+      const actor_spec = Number(obj["actor_spec"] ?? 0);
       const actor_id = Number(obj["actor_id"] ?? 0);
       const operation = String(obj["operation"] ?? "add") === "remove" ? 1 : 0;
+      const operand_type = Number(obj["operand_type"] ?? 0);
       const amount = Number(obj["amount"] ?? 0);
-      return [{ code: 326, indent: 0, parameters: [0, actor_id, 0, 0, operation, amount] }];
+      return [{ code: 326, indent: 0, parameters: [actor_spec, actor_id, operation, operand_type, amount] }];
     }
 
     case "recover-all": {
@@ -466,13 +483,11 @@ export function commandInputToEventCommands(command: MapEventCommandInput): RPGE
       return [{ code: 261, indent: 0, parameters: [String(obj["filename"] ?? "")] }];
 
     case "fade-out": {
-      const duration = Number(obj["duration"] ?? (typeof rawData === "string" && rawData ? rawData : 24)) || 24;
-      return [{ code: 221, indent: 0, parameters: [duration] }];
+      return [{ code: 221, indent: 0, parameters: [] }];
     }
 
     case "fade-in": {
-      const duration = Number(obj["duration"] ?? (typeof rawData === "string" && rawData ? rawData : 24)) || 24;
-      return [{ code: 222, indent: 0, parameters: [duration] }];
+      return [{ code: 222, indent: 0, parameters: [] }];
     }
 
     case "comment": {
@@ -550,19 +565,23 @@ export function commandInputToEventCommands(command: MapEventCommandInput): RPGE
     }
 
     case "change-exp": {
+      const actor_spec = Number(obj["actor_spec"] ?? 0);
       const actor_id = Number(obj["actor_id"] ?? 0);
       const operation = String(obj["operation"] ?? "add") === "remove" ? 1 : 0;
+      const operand_type = Number(obj["operand_type"] ?? 0);
       const amount = Number(obj["amount"] ?? 0);
       const show_level_up = Boolean(obj["show_level_up"] ?? true);
-      return [{ code: 315, indent: 0, parameters: [0, actor_id, 0, 0, operation, amount, show_level_up] }];
+      return [{ code: 315, indent: 0, parameters: [actor_spec, actor_id, operation, operand_type, amount, show_level_up] }];
     }
 
     case "change-level": {
+      const actor_spec = Number(obj["actor_spec"] ?? 0);
       const actor_id = Number(obj["actor_id"] ?? 0);
       const operation = String(obj["operation"] ?? "add") === "remove" ? 1 : 0;
+      const operand_type = Number(obj["operand_type"] ?? 0);
       const amount = Number(obj["amount"] ?? 1);
       const show_level_up = Boolean(obj["show_level_up"] ?? true);
-      return [{ code: 316, indent: 0, parameters: [0, actor_id, 0, 0, operation, amount, show_level_up] }];
+      return [{ code: 316, indent: 0, parameters: [actor_spec, actor_id, operation, operand_type, amount, show_level_up] }];
     }
 
     case "change-skill": {
@@ -601,11 +620,13 @@ export function commandInputToEventCommands(command: MapEventCommandInput): RPGE
       return [{ code: 251, indent: 0, parameters: [] }];
 
     case "change-parameter": {
+      const actor_spec = Number(obj["actor_spec"] ?? 0);
       const actor_id = Number(obj["actor_id"] ?? 0);
       const parameter_id = Number(obj["parameter_id"] ?? 0);
       const operation = String(obj["operation"] ?? "add") === "remove" ? 1 : 0;
+      const operand_type = Number(obj["operand_type"] ?? 0);
       const amount = Number(obj["amount"] ?? 0);
-      return [{ code: 317, indent: 0, parameters: [0, actor_id, parameter_id, 0, 0, operation, amount] }];
+      return [{ code: 317, indent: 0, parameters: [actor_spec, actor_id, parameter_id, operation, operand_type, amount] }];
     }
 
     case "change-name": {
@@ -643,9 +664,9 @@ export function commandInputToEventCommands(command: MapEventCommandInput): RPGE
     }
 
     case "change-followers":
-      return [{ code: 215, indent: 0, parameters: [Boolean(obj["visible"] ?? true) ? 0 : 1] }];
+      return [{ code: 216, indent: 0, parameters: [Boolean(obj["visible"] ?? true) ? 0 : 1] }];
     case "gather-followers":
-      return [{ code: 216, indent: 0, parameters: [] }];
+      return [{ code: 217, indent: 0, parameters: [] }];
 
     case "set-vehicle-location": {
       const vehicle = Number(obj["vehicle"] ?? 0);
@@ -721,13 +742,13 @@ export function commandInputToEventCommands(command: MapEventCommandInput): RPGE
       return [{ code: 354, indent: 0, parameters: [] }];
 
     case "change-save-access":
-      return [{ code: 134, indent: 0, parameters: [Boolean(obj["disabled"] ?? false) ? 1 : 0] }];
+      return [{ code: 134, indent: 0, parameters: [Boolean(obj["disabled"] ?? false) ? 0 : 1] }];
     case "change-menu-access":
-      return [{ code: 135, indent: 0, parameters: [Boolean(obj["disabled"] ?? false) ? 1 : 0] }];
+      return [{ code: 135, indent: 0, parameters: [Boolean(obj["disabled"] ?? false) ? 0 : 1] }];
     case "change-encounter":
-      return [{ code: 136, indent: 0, parameters: [Boolean(obj["disabled"] ?? false) ? 1 : 0] }];
+      return [{ code: 136, indent: 0, parameters: [Boolean(obj["disabled"] ?? false) ? 0 : 1] }];
     case "change-formation-access":
-      return [{ code: 137, indent: 0, parameters: [Boolean(obj["disabled"] ?? false) ? 1 : 0] }];
+      return [{ code: 137, indent: 0, parameters: [Boolean(obj["disabled"] ?? false) ? 0 : 1] }];
     case "change-window-color": {
       const red = Number(obj["red"] ?? 0);
       const green = Number(obj["green"] ?? 0);
@@ -736,8 +757,44 @@ export function commandInputToEventCommands(command: MapEventCommandInput): RPGE
     }
 
     case "plugin-command": {
+      const hasField = (name: string): boolean => Object.prototype.hasOwnProperty.call(obj, name);
+      const rawCommand = typeof obj["raw_command"] === "string"
+        ? obj["raw_command"]
+        : typeof rawData === "string" && rawData.length > 0
+          ? rawData
+          : undefined;
+
+      if (engine === "mv") {
+        if (rawCommand !== undefined) {
+          const conflictingFields = ["command_name", "args", "mv_args"].filter(hasField);
+          if (conflictingFields.length > 0) {
+            throw new Error(`MV raw_command cannot be combined with structured fields: ${conflictingFields.join(", ")}`);
+          }
+          if (!rawCommand.trim()) throw new Error("MV raw_command must not be empty");
+          return [{ code: 356, indent: 0, parameters: [rawCommand] }];
+        }
+
+        const commandName = String(obj["command_name"] ?? "").trim();
+        if (!commandName) throw new Error("MV plugin-command requires command_name or raw_command");
+        if (hasField("args")) {
+          throw new Error("MV plugin-command uses mv_args, not MZ args");
+        }
+        const mvArgs = obj["mv_args"];
+        if (mvArgs !== undefined && !Array.isArray(mvArgs)) {
+          throw new Error("MV mv_args must be an array of strings");
+        }
+        const tokens = [commandName, ...(((mvArgs as unknown[] | undefined) ?? []).map(String))];
+        return [{ code: 356, indent: 0, parameters: [tokens.join(" ")] }];
+      }
+
+      if (rawCommand !== undefined || hasField("mv_args")) {
+        throw new Error("MZ plugin-command uses plugin_name, command_name, and args; raw_command/mv_args are MV-only");
+      }
       const plugin_name = String(obj["plugin_name"] ?? "");
       const command_name = String(obj["command_name"] ?? "");
+      if (!plugin_name || !command_name) {
+        throw new Error("MZ plugin-command requires plugin_name and command_name");
+      }
       const args = (obj["args"] ?? {}) as Record<string, string>;
       return [{ code: 357, indent: 0, parameters: [plugin_name, command_name, args] }];
     }
@@ -791,22 +848,33 @@ export function commandInputToEventCommands(command: MapEventCommandInput): RPGE
     case "toggle-party-member": {
       const actor_id = Number(obj["actor_id"] ?? 1);
       const enable = Boolean(obj["enable"] ?? true);
-      return [{ code: 340, indent: 0, parameters: [actor_id, enable ? 0 : 1] }];
+      const initialize = Boolean(obj["initialize"] ?? enable);
+      return [{ code: 129, indent: 0, parameters: [actor_id, enable ? 0 : 1, initialize] }];
     }
 
     case "change-enemy-hp": {
       const enemy_index = Number(obj["enemy_index"] ?? 0);
       const operation = Number(obj["operation"] ?? 0);
+      const operand_type = Number(obj["operand_type"] ?? 0);
       const operand = Number(obj["operand"] ?? 0);
       const allow_ko = Boolean(obj["allow_ko"] ?? false);
-      return [{ code: 331, indent: 0, parameters: [enemy_index, 0, operation, 0, operand, allow_ko] }];
+      return [{ code: 331, indent: 0, parameters: [enemy_index, operation, operand_type, operand, allow_ko] }];
     }
 
     case "change-enemy-mp": {
       const enemy_index = Number(obj["enemy_index"] ?? 0);
       const operation = Number(obj["operation"] ?? 0);
+      const operand_type = Number(obj["operand_type"] ?? 0);
       const operand = Number(obj["operand"] ?? 0);
-      return [{ code: 332, indent: 0, parameters: [enemy_index, 0, operation, 0, operand] }];
+      return [{ code: 332, indent: 0, parameters: [enemy_index, operation, operand_type, operand] }];
+    }
+
+    case "change-enemy-tp": {
+      const enemy_index = Number(obj["enemy_index"] ?? 0);
+      const operation = Number(obj["operation"] ?? 0);
+      const operand_type = Number(obj["operand_type"] ?? 0);
+      const operand = Number(obj["operand"] ?? 0);
+      return [{ code: 342, indent: 0, parameters: [enemy_index, operation, operand_type, operand] }];
     }
 
     case "change-enemy-state": {
@@ -835,7 +903,8 @@ export function commandInputToEventCommands(command: MapEventCommandInput): RPGE
     case "show-battle-animation": {
       const animation_id = Number(obj["animation_id"] ?? 1);
       const enemy_index = Number(obj["enemy_index"] ?? -1);
-      return [{ code: 337, indent: 0, parameters: [animation_id, enemy_index] }];
+      const entire_troop = Boolean(obj["entire_troop"] ?? enemy_index === -1);
+      return [{ code: 337, indent: 0, parameters: [enemy_index, animation_id, entire_troop] }];
     }
 
     case "force-action": {
@@ -843,7 +912,7 @@ export function commandInputToEventCommands(command: MapEventCommandInput): RPGE
       const subject_index = Number(obj["subject_index"] ?? 0);
       const skill_id = Number(obj["skill_id"] ?? 1);
       const target_index = Number(obj["target_index"] ?? -1);
-      return [{ code: 338, indent: 0, parameters: [subject_type, subject_index, skill_id, target_index] }];
+      return [{ code: 339, indent: 0, parameters: [subject_type, subject_index, skill_id, target_index] }];
     }
 
     default:

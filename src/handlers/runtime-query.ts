@@ -1,6 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import type { HandlerContext } from "./types.js";
+import { xhrPostGameStateStatement } from "../rpgmaker/runtime-script.js";
 
 function notConnected(): string {
   return JSON.stringify({ error: "Game not connected. Start the game with the RPGMakerDebugger plugin enabled." });
@@ -23,12 +24,11 @@ export async function handleGetInventory(ctx: HandlerContext): Promise<string> {
       result.armors = $gameParty.armors().map(function(a){return{id:a.id,name:a.name,count:$gameParty.numItems(a)};});
     }
     result.gold = $gameParty.gold();
-    fetch('http://127.0.0.1:9001/gamestate', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mapId:$gameMap.mapId(),playerX:$gamePlayer.x,playerY:$gamePlayer.y,gold:$gameParty.gold(),partyMembers:$gameParty.members().map(function(m){return{name:m.name(),hp:m.hp,mhp:m.mhp,level:m.level};}),inBattle:$gameParty.inBattle(),timestamp:new Date().toISOString(),queryResult:result})});
+    ${xhrPostGameStateStatement("{mapId:$gameMap.mapId(),playerX:$gamePlayer.x,playerY:$gamePlayer.y,gold:$gameParty.gold(),partyMembers:$gameParty.members().map(function(m){return{name:m.name(),hp:m.hp,mhp:m.mhp,level:m.level};}),inBattle:$gameParty.inBattle(),timestamp:new Date().toISOString(),queryResult:result}")}
   })();`;
 
   try {
-    debugBridge.setCommand("execute_script", { code: script });
-    const state = await debugBridge.waitForGameState(8000);
+    const state = await debugBridge.sendAndWaitForGameState("execute_script", { code: script }, 8000);
     const stateRecord = state as unknown as Record<string, unknown>;
     return JSON.stringify({ success: true, category, inventory: stateRecord.queryResult ?? state });
   } catch (error) {
@@ -59,8 +59,7 @@ export async function handleModifyInventory(ctx: HandlerContext): Promise<string
 
   const code = lines.join(" ");
   try {
-    debugBridge.setCommand("execute_script", { code });
-    const ok = await debugBridge.waitForAck(8000);
+    const ok = await debugBridge.sendAndWaitForAck("execute_script", { code }, 8000);
     if (!ok) return JSON.stringify({ error: "Timed out waiting for game confirmation" });
     changeLog.append({ tool: "modify-inventory", entityType: "Inventory", action: "update", summary: `Inventory modified: ${operations.length} operations` });
     return JSON.stringify({ success: true, operations_applied: operations.length });
@@ -84,12 +83,11 @@ export async function handleGetSwitch(ctx: HandlerContext): Promise<string> {
 
   const script = `(function(){
     var v=$gameSwitches.value(${id});
-    fetch('http://127.0.0.1:9001/gamestate', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mapId:$gameMap.mapId(),playerX:$gamePlayer.x,playerY:$gamePlayer.y,gold:$gameParty.gold(),partyMembers:[],inBattle:$gameParty.inBattle(),timestamp:new Date().toISOString(),queryResult:{switchId:${id},value:v}})});
+    ${xhrPostGameStateStatement(`{mapId:$gameMap.mapId(),playerX:$gamePlayer.x,playerY:$gamePlayer.y,gold:$gameParty.gold(),partyMembers:[],inBattle:$gameParty.inBattle(),timestamp:new Date().toISOString(),queryResult:{switchId:${id},value:v}}`)}
   })();`;
 
   try {
-    debugBridge.setCommand("execute_script", { code: script });
-    const state = await debugBridge.waitForGameState(8000);
+    const state = await debugBridge.sendAndWaitForGameState("execute_script", { code: script }, 8000);
     const qr = (state as unknown as Record<string, unknown>).queryResult as { switchId: number; value: boolean } | undefined;
     return JSON.stringify({ success: true, id, name, value: qr?.value ?? null });
   } catch (error) {
@@ -111,12 +109,11 @@ export async function handleGetVariable(ctx: HandlerContext): Promise<string> {
 
   const script = `(function(){
     var v=$gameVariables.value(${id});
-    fetch('http://127.0.0.1:9001/gamestate', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mapId:$gameMap.mapId(),playerX:$gamePlayer.x,playerY:$gamePlayer.y,gold:$gameParty.gold(),partyMembers:[],inBattle:$gameParty.inBattle(),timestamp:new Date().toISOString(),queryResult:{variableId:${id},value:v}})});
+    ${xhrPostGameStateStatement(`{mapId:$gameMap.mapId(),playerX:$gamePlayer.x,playerY:$gamePlayer.y,gold:$gameParty.gold(),partyMembers:[],inBattle:$gameParty.inBattle(),timestamp:new Date().toISOString(),queryResult:{variableId:${id},value:v}}`)}
   })();`;
 
   try {
-    debugBridge.setCommand("execute_script", { code: script });
-    const state = await debugBridge.waitForGameState(8000);
+    const state = await debugBridge.sendAndWaitForGameState("execute_script", { code: script }, 8000);
     const qr = (state as unknown as Record<string, unknown>).queryResult as { variableId: number; value: unknown } | undefined;
     return JSON.stringify({ success: true, id, name, value: qr?.value ?? null });
   } catch (error) {
@@ -141,8 +138,7 @@ export async function handleCallCommonEvent(ctx: HandlerContext): Promise<string
 
   const code = `$gameTemp.reserveCommonEvent(${eventId});`;
   try {
-    debugBridge.setCommand("execute_script", { code });
-    const ok = await debugBridge.waitForAck(8000);
+    const ok = await debugBridge.sendAndWaitForAck("execute_script", { code }, 8000);
     if (!ok) return JSON.stringify({ error: "Timed out waiting for game confirmation" });
     changeLog.append({ tool: "call-common-event", entityType: "CommonEvent", entityId: eventId, action: "update", summary: `CommonEvent ${eventId} triggered at runtime` });
     return JSON.stringify({ success: true, common_event_id: eventId });
@@ -173,8 +169,7 @@ export async function handleModifyActorRuntime(ctx: HandlerContext): Promise<str
   const code = `(function(){${lines.join(" ")}})();`;
 
   try {
-    debugBridge.setCommand("execute_script", { code });
-    const ok = await debugBridge.waitForAck(8000);
+    const ok = await debugBridge.sendAndWaitForAck("execute_script", { code }, 8000);
     if (!ok) return JSON.stringify({ error: "Timed out waiting for game confirmation" });
     changeLog.append({ tool: "modify-actor-runtime", entityType: "Actor", entityId: actorId, action: "update", summary: `Actor ${actorId} modified at runtime: ${operations.length} operations` });
     return JSON.stringify({ success: true, actor_id: actorId, operations_applied: operations.length });

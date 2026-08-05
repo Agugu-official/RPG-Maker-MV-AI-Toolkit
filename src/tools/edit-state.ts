@@ -2,7 +2,7 @@ import type { Tool } from "@modelcontextprotocol/sdk/types.js";
 
 export const EditStateTool: Tool = {
   name: "edit-state",
-  description: "Create or update a state (status effect) in the RPG Maker MZ project. Omit state_id to create a new state.",
+  description: "Create or update a state (status effect) in the RPG Maker MV/MZ project. Omit state_id to create a new state.",
   inputSchema: {
     type: "object",
     properties: {

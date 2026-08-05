@@ -3,7 +3,7 @@ import type { Tool } from "@modelcontextprotocol/sdk/types.js";
 export const CreateEnemyTool: Tool = {
   name: "create-enemy",
   description:
-    "Create a new enemy in the RPG Maker MZ database. The name is required. " +
+    "Create a new enemy in the RPG Maker MV/MZ database. The name is required. " +
     "Stats default to [maxHp=100, maxMp=0, atk=10, def=10, mat=10, mdf=10, agi=10, luk=10]. " +
     "Three empty drop slots are created automatically; use edit-drop-items to configure them. " +
     "Returns the new enemy_id.",

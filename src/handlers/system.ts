@@ -3,9 +3,20 @@ import * as path from "path";
 import type { HandlerContext } from "./types.js";
 
 export async function handleEditSystem(ctx: HandlerContext): Promise<string> {
-  const { input, writer, projectPath, changeLog } = ctx;
+  const { input, reader, writer, projectPath, changeLog } = ctx;
 
   try {
+    if (reader.engine === "mv") {
+      const unsupported = ["opt_autosave", "opt_follower_distance"].filter((field) => input[field] !== undefined);
+      if (unsupported.length > 0) {
+        return JSON.stringify({
+          error: "The requested System.json fields are not supported by RPG Maker MV",
+          engine: reader.engine,
+          fields: unsupported,
+        });
+      }
+    }
+
     const systemPath = path.join(projectPath, "data", "System.json");
     if (!fs.existsSync(systemPath)) {
       return JSON.stringify({ error: "System.json not found in project data directory" });

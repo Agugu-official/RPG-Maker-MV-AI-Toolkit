@@ -1,22 +1,23 @@
+import { createRPGMakerHttpBridge } from "../dist/rpgmaker/http-bridge.js";
 import { RPGMakerDebugBridge } from "../dist/rpgmaker/debug-bridge.js";
 
-const bridge = new RPGMakerDebugBridge(9001);
-bridge.start();
+const port = Number(process.env.RPGMAKER_BRIDGE_PORT || 9001);
+const debugBridge = new RPGMakerDebugBridge();
+const server = createRPGMakerHttpBridge(debugBridge);
 
-console.log("✓ Debug Bridge HTTP server running on port 9001");
-console.log("Waiting for game connection...");
+server.listen(port, "127.0.0.1", () => {
+  console.log(`RPG Maker MV/MZ HTTP bridge running on port ${port}`);
+  console.log("Waiting for the generated debug plugin to connect...");
+});
 
-let lastConnected = false;
-setInterval(() => {
-  const now = bridge.connected;
-  if (now !== lastConnected) {
-    lastConnected = now;
-    if (now) console.log("✓ Game connected!");
-    else console.log("✗ Game disconnected");
-  }
+const statusTimer = setInterval(() => {
+  console.log(debugBridge.connected ? "Game connected" : "Waiting for game connection");
 }, 2000);
 
-process.on("SIGINT", () => {
-  bridge.stop();
-  process.exit();
-});
+function shutdown() {
+  clearInterval(statusTimer);
+  server.close(() => process.exit(0));
+}
+
+process.on("SIGINT", shutdown);
+process.on("SIGTERM", shutdown);

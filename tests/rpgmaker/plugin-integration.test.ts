@@ -67,8 +67,8 @@ function makeTempProject(): string {
 function makeContext(dir: string, bridge?: RPGMakerDebugBridge): HandlerContext {
   return {
     projectPath: dir,
-    reader: new RPGMakerReader({ projectPath: dir }),
-    writer: new RPGMakerWriter({ projectPath: dir, createBackup: false }),
+    reader: new RPGMakerReader({ projectPath: dir, engine: "mz" }),
+    writer: new RPGMakerWriter({ projectPath: dir, createBackup: false, engine: "mz" }),
     debugBridge: bridge ?? new RPGMakerDebugBridge(),
     changeLog: new ChangeLog(dir),
     input: {},

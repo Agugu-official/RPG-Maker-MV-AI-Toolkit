@@ -236,7 +236,7 @@ describe("tint-picture command", () => {
 });
 
 describe("battle event commands", () => {
-  it("change-enemy-hp (331): enemy_index, operation, operand, allow_ko", () => {
+  it("change-enemy-hp (331): enemy_index, operation, operand_type, operand, allow_ko", () => {
     const cmds = commandInputToEventCommands({
       type: "change-enemy-hp",
       data: { enemy_index: 2, operation: 1, operand: 50, allow_ko: true },
@@ -244,12 +244,12 @@ describe("battle event commands", () => {
     expect(cmds).toHaveLength(1);
     expect(cmds[0].code).toBe(331);
     expect(cmds[0].parameters[0]).toBe(2);   // enemy_index
-    expect(cmds[0].parameters[2]).toBe(1);   // operation
-    expect(cmds[0].parameters[4]).toBe(50);  // operand
-    expect(cmds[0].parameters[5]).toBe(true); // allow_ko
+    expect(cmds[0].parameters[1]).toBe(1);   // operation
+    expect(cmds[0].parameters[3]).toBe(50);  // operand
+    expect(cmds[0].parameters[4]).toBe(true); // allow_ko
   });
 
-  it("change-enemy-mp (332): enemy_index, operation, operand", () => {
+  it("change-enemy-mp (332): enemy_index, operation, operand_type, operand", () => {
     const cmds = commandInputToEventCommands({
       type: "change-enemy-mp",
       data: { enemy_index: 0, operation: 0, operand: 20 },
@@ -257,8 +257,8 @@ describe("battle event commands", () => {
     expect(cmds).toHaveLength(1);
     expect(cmds[0].code).toBe(332);
     expect(cmds[0].parameters[0]).toBe(0);  // enemy_index
-    expect(cmds[0].parameters[2]).toBe(0);  // operation
-    expect(cmds[0].parameters[4]).toBe(20); // operand
+    expect(cmds[0].parameters[1]).toBe(0);  // operation
+    expect(cmds[0].parameters[3]).toBe(20); // operand
   });
 
   it("change-enemy-state (333): enemy_index, action, state_id", () => {
@@ -313,15 +313,16 @@ describe("battle event commands", () => {
     expect(cmds[0].parameters[1]).toBe(5); // enemy_id
   });
 
-  it("show-battle-animation (337): animation_id and enemy_index", () => {
+  it("show-battle-animation (337): enemy_index, animation_id, entire_troop", () => {
     const cmds = commandInputToEventCommands({
       type: "show-battle-animation",
       data: { animation_id: 7, enemy_index: 2 },
     });
     expect(cmds).toHaveLength(1);
     expect(cmds[0].code).toBe(337);
-    expect(cmds[0].parameters[0]).toBe(7);  // animation_id
-    expect(cmds[0].parameters[1]).toBe(2);  // enemy_index
+    expect(cmds[0].parameters[0]).toBe(2);  // enemy_index
+    expect(cmds[0].parameters[1]).toBe(7);  // animation_id
+    expect(cmds[0].parameters[2]).toBe(false); // entire_troop
   });
 
   it("show-battle-animation (337): enemy_index defaults to -1 (all enemies)", () => {
@@ -329,16 +330,17 @@ describe("battle event commands", () => {
       type: "show-battle-animation",
       data: { animation_id: 3 },
     });
-    expect(cmds[0].parameters[1]).toBe(-1);
+    expect(cmds[0].parameters[0]).toBe(-1);
+    expect(cmds[0].parameters[2]).toBe(true);
   });
 
-  it("force-action (338): subject_type, subject_index, skill_id, target_index", () => {
+  it("force-action (339): subject_type, subject_index, skill_id, target_index", () => {
     const cmds = commandInputToEventCommands({
       type: "force-action",
       data: { subject_type: 1, subject_index: 0, skill_id: 10, target_index: -1 },
     });
     expect(cmds).toHaveLength(1);
-    expect(cmds[0].code).toBe(338);
+    expect(cmds[0].code).toBe(339);
     expect(cmds[0].parameters[0]).toBe(1);   // subject_type
     expect(cmds[0].parameters[1]).toBe(0);   // subject_index
     expect(cmds[0].parameters[2]).toBe(10);  // skill_id
@@ -401,80 +403,80 @@ describe("system configuration commands", () => {
     expect(cmds[0].parameters[1]).toEqual({ name: "Ship", volume: 85, pitch: 100, pan: 0 });
   });
 
-  it("change-save-access (134): disabled=true → parameters[0]=1", () => {
+  it("change-save-access (134): disabled=true → parameters[0]=0", () => {
     const cmds = commandInputToEventCommands({
       type: "change-save-access",
       data: { disabled: true },
     });
     expect(cmds).toHaveLength(1);
     expect(cmds[0].code).toBe(134);
-    expect(cmds[0].parameters[0]).toBe(1);
+    expect(cmds[0].parameters[0]).toBe(0);
   });
 
-  it("change-save-access (134): disabled=false → parameters[0]=0", () => {
+  it("change-save-access (134): disabled=false → parameters[0]=1", () => {
     const cmds = commandInputToEventCommands({
       type: "change-save-access",
       data: { disabled: false },
     });
     expect(cmds[0].code).toBe(134);
-    expect(cmds[0].parameters[0]).toBe(0);
+    expect(cmds[0].parameters[0]).toBe(1);
   });
 
-  it("change-menu-access (135): disabled=true → parameters[0]=1", () => {
+  it("change-menu-access (135): disabled=true → parameters[0]=0", () => {
     const cmds = commandInputToEventCommands({
       type: "change-menu-access",
       data: { disabled: true },
     });
     expect(cmds).toHaveLength(1);
     expect(cmds[0].code).toBe(135);
-    expect(cmds[0].parameters[0]).toBe(1);
+    expect(cmds[0].parameters[0]).toBe(0);
   });
 
-  it("change-menu-access (135): disabled=false → parameters[0]=0", () => {
+  it("change-menu-access (135): disabled=false → parameters[0]=1", () => {
     const cmds = commandInputToEventCommands({
       type: "change-menu-access",
       data: { disabled: false },
     });
     expect(cmds[0].code).toBe(135);
-    expect(cmds[0].parameters[0]).toBe(0);
+    expect(cmds[0].parameters[0]).toBe(1);
   });
 
-  it("change-encounter (136): disabled=true → parameters[0]=1", () => {
+  it("change-encounter (136): disabled=true → parameters[0]=0", () => {
     const cmds = commandInputToEventCommands({
       type: "change-encounter",
       data: { disabled: true },
     });
     expect(cmds).toHaveLength(1);
     expect(cmds[0].code).toBe(136);
-    expect(cmds[0].parameters[0]).toBe(1);
+    expect(cmds[0].parameters[0]).toBe(0);
   });
 
-  it("change-encounter (136): disabled=false → parameters[0]=0", () => {
+  it("change-encounter (136): disabled=false → parameters[0]=1", () => {
     const cmds = commandInputToEventCommands({
       type: "change-encounter",
       data: { disabled: false },
     });
     expect(cmds[0].code).toBe(136);
-    expect(cmds[0].parameters[0]).toBe(0);
+    expect(cmds[0].parameters[0]).toBe(1);
   });
 
-  it("change-formation-access (137): disabled=true → parameters[0]=1", () => {
+  it("change-formation-access (137): disabled=true → parameters[0]=0", () => {
     const cmds = commandInputToEventCommands({
       type: "change-formation-access",
       data: { disabled: true },
     });
     expect(cmds).toHaveLength(1);
     expect(cmds[0].code).toBe(137);
-    expect(cmds[0].parameters[0]).toBe(1);
+    expect(cmds[0].parameters[0]).toBe(0);
   });
 
-  it("change-formation-access (137): disabled=false → parameters[0]=0", () => {
+  it("change-formation-access (137): disabled=false → parameters[0]=1", () => {
     const cmds = commandInputToEventCommands({
       type: "change-formation-access",
       data: { disabled: false },
     });
     expect(cmds[0].code).toBe(137);
-    expect(cmds[0].parameters[0]).toBe(0);
+    expect(cmds[0].parameters[0]).toBe(1);
   });
 
   it("change-window-color (138): code=138, parameters[0] is [red, green, blue, 0]", () => {
@@ -489,29 +491,29 @@ describe("system configuration commands", () => {
 });
 
 describe("follower and vehicle commands", () => {
-  it("change-followers (215): visible=true → parameters[0]=0", () => {
+  it("change-followers (216): visible=true -> parameters[0]=0", () => {
     const cmds = commandInputToEventCommands({
       type: "change-followers",
       data: { visible: true },
     });
     expect(cmds).toHaveLength(1);
-    expect(cmds[0].code).toBe(215);
+    expect(cmds[0].code).toBe(216);
     expect(cmds[0].parameters[0]).toBe(0);
   });
 
-  it("change-followers (215): visible=false → parameters[0]=1", () => {
+  it("change-followers (216): visible=false -> parameters[0]=1", () => {
     const cmds = commandInputToEventCommands({
       type: "change-followers",
       data: { visible: false },
     });
-    expect(cmds[0].code).toBe(215);
+    expect(cmds[0].code).toBe(216);
     expect(cmds[0].parameters[0]).toBe(1);
   });
 
-  it("gather-followers (216): code=216, parameters=[]", () => {
+  it("gather-followers (217): code=217, parameters=[]", () => {
     const cmds = commandInputToEventCommands({ type: "gather-followers" });
     expect(cmds).toHaveLength(1);
-    expect(cmds[0].code).toBe(216);
+    expect(cmds[0].code).toBe(217);
     expect(cmds[0].parameters).toEqual([]);
   });
 

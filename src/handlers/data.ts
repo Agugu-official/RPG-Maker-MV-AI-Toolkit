@@ -14,6 +14,8 @@ export async function handleHealthCheck(ctx: HandlerContext): Promise<string> {
   return JSON.stringify({
     status: "ok",
     rpgmaker_path: ctx.projectPath,
+    engine: ctx.profile.engine,
+    engine_source: ctx.profile.source,
     debug_mode: ctx.debug,
     timestamp: new Date().toISOString(),
   });

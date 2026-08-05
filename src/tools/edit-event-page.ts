@@ -1,4 +1,5 @@
 import type { Tool } from "@modelcontextprotocol/sdk/types.js";
+import { eventCommandSchema } from "./event-command-schema.js";
 
 export const EditEventPageTool: Tool = {
   name: "edit-event-page",
@@ -96,17 +97,7 @@ export const EditEventPageTool: Tool = {
           commands: {
             type: "array",
             description: "Event commands for this page. Same format as create-map-event: [{type, data}]",
-            items: {
-              type: "object",
-              properties: {
-                type: {
-                  type: "string",
-                  enum: ["message", "choice", "wait", "transfer", "script", "switch", "variable", "common-event", "battle", "animation"],
-                },
-                data: { type: "string" },
-              },
-              required: ["type"],
-            },
+            items: eventCommandSchema,
           },
         },
       },

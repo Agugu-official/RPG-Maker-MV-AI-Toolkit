@@ -23,7 +23,7 @@ type StoryScene = {
 };
 
 export async function handleStoryGenerator(ctx: HandlerContext): Promise<string> {
-  const { input, writer, projectPath } = ctx;
+  const { input, writer, projectPath, reader } = ctx;
   const storyTitle = input.story_title as string;
   const storyDescription = input.story_description as string;
   const scenes = input.scenes as StoryScene[];
@@ -52,7 +52,7 @@ export async function handleStoryGenerator(ctx: HandlerContext): Promise<string>
             commands.push({ code: 301, indent: 0, parameters: [0, Number(event.content), true, false] });
             break;
           case "choice":
-            commands.push(...commandInputToEventCommands({ type: "choice", data: event.content }));
+            commands.push(...commandInputToEventCommands({ type: "choice", data: event.content }, reader.engine));
             break;
           case "animation":
             commands.push({ code: 212, indent: 0, parameters: [0, Number(event.content), true] });

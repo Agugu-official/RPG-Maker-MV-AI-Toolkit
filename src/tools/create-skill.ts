@@ -3,7 +3,7 @@ import type { Tool } from "@modelcontextprotocol/sdk/types.js";
 export const CreateSkillTool: Tool = {
   name: "create-skill",
   description:
-    "Create a new skill in the RPG Maker MZ database. The name is required; all other fields use " +
+    "Create a new skill in the RPG Maker MV/MZ database. The name is required; all other fields use " +
     "sensible defaults (scope=1 one enemy, occasion=1 battle only, successRate=100, hitType=1 physical). " +
     "Returns the new skill_id.",
   inputSchema: {

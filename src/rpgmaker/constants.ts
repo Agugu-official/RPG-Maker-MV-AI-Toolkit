@@ -1,5 +1,5 @@
 /**
- * RPG Maker MZ event command codes, trait codes, and effect codes.
+ * Shared RPG Maker MV/MZ event command codes, trait codes, and effect codes.
  * Use these instead of magic numbers throughout handlers and commands builders.
  */
 
@@ -102,6 +102,16 @@ export const EVENT_CMD = {
   SHOP_PROCESSING: 302,
   SHOP_ITEM_CONT: 605,
   NAME_INPUT: 303,
+  CHANGE_ENEMY_HP: 331,
+  CHANGE_ENEMY_MP: 332,
+  CHANGE_ENEMY_STATE: 333,
+  RECOVER_ALL_ENEMIES: 334,
+  ENEMY_APPEAR: 335,
+  ENEMY_TRANSFORM: 336,
+  SHOW_BATTLE_ANIMATION: 337,
+  FORCE_ACTION: 339,
+  ABORT_BATTLE: 340,
+  CHANGE_ENEMY_TP: 342,
 
   // System
   OPEN_MENU: 351,
@@ -112,6 +122,8 @@ export const EVENT_CMD = {
   // Script
   SCRIPT: 355,
   SCRIPT_CONT: 655,
+  MV_PLUGIN_COMMAND: 356,
+  MZ_PLUGIN_COMMAND: 357,
 
   // Terminator
   END: 0,

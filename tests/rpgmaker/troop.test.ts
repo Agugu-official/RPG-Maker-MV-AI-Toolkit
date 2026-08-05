@@ -39,8 +39,8 @@ function createTempProject(): string {
 }
 
 function makeCtx(dir: string, input: Record<string, unknown>): HandlerContext {
-  const reader = new RPGMakerReader({ projectPath: dir });
-  const writer = new RPGMakerWriter({ projectPath: dir, createBackup: false });
+  const reader = new RPGMakerReader({ projectPath: dir, engine: "mz" });
+  const writer = new RPGMakerWriter({ projectPath: dir, createBackup: false, engine: "mz" });
   return {
     reader,
     writer,

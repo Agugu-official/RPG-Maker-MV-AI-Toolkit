@@ -2,17 +2,17 @@ import { commandInputToEventCommands } from "../rpgmaker/commands.js";
 import type { MapEventCommandInput } from "../rpgmaker/commands.js";
 import type { HandlerContext } from "./types.js";
 
-function buildCommandList(commands: MapEventCommandInput[]): unknown[] {
+function buildCommandList(commands: MapEventCommandInput[], engine: "mv" | "mz"): unknown[] {
   const list: unknown[] = [];
   for (const cmd of commands) {
-    list.push(...commandInputToEventCommands(cmd));
+    list.push(...commandInputToEventCommands(cmd, engine));
   }
   list.push({ code: 0, indent: 0, parameters: [] });
   return list;
 }
 
 export async function handleCreateCommonEvent(ctx: HandlerContext): Promise<string> {
-  const { input, writer, changeLog } = ctx;
+  const { input, writer, changeLog, reader } = ctx;
 
   try {
     const name = (input.name as string | undefined)?.trim();
@@ -29,7 +29,7 @@ export async function handleCreateCommonEvent(ctx: HandlerContext): Promise<stri
     }
 
     const rawCommands = (input.commands as MapEventCommandInput[] | undefined) ?? [];
-    const list = buildCommandList(rawCommands);
+    const list = buildCommandList(rawCommands, reader.engine);
 
     const eventData: Record<string, unknown> = { name, trigger, switchId, list };
     const newId = writer.addCommonEvent(eventData);
@@ -49,7 +49,7 @@ export async function handleCreateCommonEvent(ctx: HandlerContext): Promise<stri
 }
 
 export async function handleEditCommonEvent(ctx: HandlerContext): Promise<string> {
-  const { input, writer, changeLog } = ctx;
+  const { input, writer, changeLog, reader } = ctx;
 
   try {
     const eventId = input.event_id as number | undefined;
@@ -79,7 +79,7 @@ export async function handleEditCommonEvent(ctx: HandlerContext): Promise<string
 
     if (input.commands !== undefined) {
       const rawCommands = input.commands as MapEventCommandInput[];
-      updates.list = buildCommandList(rawCommands);
+      updates.list = buildCommandList(rawCommands, reader.engine);
     }
 
     if (Object.keys(updates).length === 0) {

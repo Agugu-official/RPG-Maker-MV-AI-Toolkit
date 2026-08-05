@@ -84,7 +84,7 @@ let writer: RPGMakerWriter;
 
 beforeEach(() => {
   tmpDir = createTempProject();
-  writer = new RPGMakerWriter({ projectPath: tmpDir, createBackup: true, debug: false });
+  writer = new RPGMakerWriter({ projectPath: tmpDir, createBackup: true, debug: false, engine: "mz" });
 });
 
 afterEach(() => {

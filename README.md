@@ -1,6 +1,6 @@
 # RPG Maker MCP
 
-**Model Context Protocol server for RPG Maker MZ** — lets any MCP-compatible AI (Claude, GPT, etc.) read and write your game project directly, and control the running game in real time.
+**Model Context Protocol server for RPG Maker MV/MZ** — lets any MCP-compatible AI (Claude, GPT, etc.) read and write your game project directly, and control the running game in real time.
 
 > Available in [English](#english) · [Español](#español)
 
@@ -8,9 +8,22 @@
 
 ## English
 
+### MV/MZ compatibility
+
+The server supports both RPG Maker MV and RPG Maker MZ. At startup it detects
+the engine from the official runtime marker files (`js/rpg_core.js` plus
+`js/rpg_managers.js` for MV, or `js/rmmz_core.js` plus `js/rmmz_managers.js`
+for MZ). Set `RPGMAKER_ENGINE=auto|mv|mz` when an explicit override is needed.
+
+The shared database, map, tileset, plugin registry, backup, and change-log
+layers work with both engines. Engine-specific event commands, plugin templates,
+system fields, and animation fields are written in the detected native format.
+Third-party plugin source and MV/MZ animation formats are not automatically
+translated.
+
 ### What it does
 
-RPG Maker MCP exposes your RPG Maker MZ project as a set of tools that an AI assistant can call. Instead of describing what you want and then copy-pasting JSON by hand, you just ask the AI and it reads/writes the project files for you — with automatic backups, validation, and a full change log.
+RPG Maker MCP exposes your RPG Maker MV/MZ project as a set of tools that an AI assistant can call. Instead of describing what you want and then copy-pasting JSON by hand, you just ask the AI and it reads/writes the project files for you — with automatic backups, validation, and a full change log.
 
 It also includes a **runtime control bridge**: install a lightweight plugin in your game once, and the AI can read game state, flip switches, set variables, teleport the player, and trigger battles while the game is actually running.
 
@@ -19,7 +32,7 @@ It also includes a **runtime control bridge**: install a lightweight plugin in y
 | Requirement | Version |
 |---|---|
 | Node.js | 20 + |
-| RPG Maker MZ | any (existing project) |
+| RPG Maker MV or MZ | any (existing project) |
 
 TypeScript is only needed for development; the compiled output runs with plain Node.
 
@@ -37,11 +50,14 @@ npm run build
 Copy `.env.example` to `.env` and fill in your paths:
 
 ```env
-# Required — absolute path to your RPG Maker MZ project root
+# Required — absolute path to your RPG Maker MV/MZ project root
 RPGMAKER_PROJECT_PATH=C:\Users\you\Documents\MyGame
+RPGMAKER_ENGINE=auto             # auto | mv | mz
 
-# Optional — path to the RPG Maker MZ executable (for launch-game tool)
+# Optional — path to the RPG Maker MV/MZ executable (for launch-game tool)
 RPGMAKER_EXECUTABLE_PATH=C:\Program Files\RPG Maker MZ\RPGMakerMZ.exe
+# The executable may be RPG Maker MV or RPG Maker MZ; it must match the project.
+RPGMAKER_BRIDGE_PORT=9001  # Optional HTTP bridge port; keep it consistent for the server and debug plugin.
 
 # Optional
 MCP_DEBUG=false
@@ -73,7 +89,8 @@ Add this block to `claude_desktop_config.json`:
       "command": "node",
       "args": ["C:/path/to/RpgMakerMCP/dist/index.js"],
       "env": {
-        "RPGMAKER_PROJECT_PATH": "C:/path/to/MyGame"
+        "RPGMAKER_PROJECT_PATH": "C:/path/to/MyGame",
+        "RPGMAKER_ENGINE": "auto"
       }
     }
   }
@@ -104,7 +121,7 @@ RpgMakerMCP/
 │   ├── templates/
 │   │   └── plugin-template.ts # RPGMakerDebugger plugin generator (v2)
 │   ├── tools/                 # Zod/JSON schema definitions (one per tool)
-│   └── types/                 # RPG Maker MZ TypeScript interfaces
+│   └── types/                 # RPG Maker MV/MZ TypeScript interfaces
 ├── tests/                     # Vitest test suite (357 tests, 20 suites)
 ├── scripts/                   # launch-rpgmaker.js helper
 ├── skills/                    # Claude Code slash-command skills
@@ -390,6 +407,11 @@ Tile index formula: `x + y × mapWidth + layer × mapWidth × mapHeight`. Layers
 
 #### Plugins
 
+Plugin command event data is engine-aware. For MV, use `raw_command` to
+preserve a complete legacy command line, or use `command_name` with `mv_args`.
+For MZ, use `plugin_name`, `command_name`, and the string-valued `args` object.
+The server does not translate arbitrary third-party plugin source code.
+
 | Tool | Key inputs |
 |---|---|
 | `create-plugin` | `plugin_name` · `description` · `author` · `version` · `code_type (empty\|simple-hook\|command\|skill-modifier)` |
@@ -408,13 +430,18 @@ Plugin filenames are sanitized on write: names with `<>:"/\|?*`, path separators
 | `edit-plugin-parameters` | `plugin_name` · `parameters {key: "value", …}` |
 | `reorder-plugin` | `plugin_name` · `position (first\|last\|before\|after)` · `relative_plugin?` |
 
-**`edit-plugin-parameters`** — Update individual parameter values of a registered plugin. RPG Maker MZ stores all plugin parameter values as strings. Partial updates are supported — only the keys you provide are changed; all other parameters are preserved.
+**`edit-plugin-parameters`** — Update individual parameter values of a registered plugin. RPG Maker MV/MZ stores all plugin parameter values as strings. Partial updates are supported — only the keys you provide are changed; all other parameters are preserved.
 
-**`reorder-plugin`** — Change the load order of a plugin in `js/plugins.js`. `position: "before"` and `"after"` require `relative_plugin` to specify the reference plugin. Plugin load order is critical in RPG Maker MZ — compatibility layers must load before the plugins they extend.
+**`reorder-plugin`** — Change the load order of a plugin in `js/plugins.js`. `position: "before"` and `"after"` require `relative_plugin` to specify the reference plugin. Plugin load order is critical in RPG Maker MV/MZ — compatibility layers must load before the plugins they extend.
 
 ---
 
 #### Animations
+
+MV animations retain `animation1Name`/`animation1Hue`,
+`animation2Name`/`animation2Hue`, `frames`, `position`, and `timings`. MZ
+animations retain Effekseer metadata and MZ timeline arrays. The two formats
+are deliberately not converted.
 
 | Tool | Key inputs |
 |---|---|
@@ -489,16 +516,21 @@ All create tools return `{ success, <type>_id, name }`.
 
 #### Runtime Control
 
+The generated debug plugin targets the detected engine: MV uses
+`Game_Interpreter.prototype.pluginCommand`, while MZ uses
+`PluginManager.registerCommand`. Runtime queries use `XMLHttpRequest` so they
+work in the MV runtime as well as MZ.
+
 These tools control the **running game** in real time. They require:
 1. `setup-debug-plugin` called once on the project
-2. The plugin enabled in the RPG Maker MZ Plugin Manager
+2. The plugin enabled in the detected RPG Maker MV/MZ Plugin Manager
 3. The game running (press Play / F5)
 
 The plugin polls the MCP server every 500 ms via HTTP. All commands are confirmed with an ACK before the tool returns.
 
 | Tool | Description |
 |---|---|
-| `launch-game` | Launch the RPG Maker MZ executable |
+| `launch-game` | Launch the configured RPG Maker MV/MZ executable |
 | `get-game-state` | Read current map, player position, party HP/levels, gold |
 | `get-switch` | Read the current ON/OFF value of a game switch (`id`) |
 | `get-variable` | Read the current numeric value of a game variable (`id`) |
@@ -534,7 +566,7 @@ The plugin polls the MCP server every 500 ms via HTTP. All commands are confirme
 
 **`modify-actor-runtime`** — `field`: `level` `exp` `hp` `mp` `tp`. `mode`: `set` (assign directly) or `add` (delta). Multiple operations per call.
 
-**`control-timer-runtime`** — Start, stop, or query the in-game countdown timer. `action: "get"` returns `{ working, seconds }`. `action: "start"` requires `frames` (60 frames = 1 second). Uses `waitForAck` for write actions, `waitForGameState` for get.
+**`control-timer-runtime`** — Start, stop, or query the in-game countdown timer. `action: "get"` returns `{ working, seconds }`. `action: "start"` requires `frames` (60 frames = 1 second). Uses the ordered bridge helpers for ACK and state operations.
 
 **`get-battle-state-runtime`** — Read current battle state while in a battle: `{ in_battle, turn, enemies: [{id,name,hp,mhp,mp,alive,states}], party: [{id,name,hp,mhp,mp,alive}] }`. Returns `in_battle: false` when not in battle.
 
@@ -648,9 +680,15 @@ npm run test:coverage     # with v8 coverage report
 
 ## Español
 
+El servidor es compatible con RPG Maker MV y MZ. Detecta el motor mediante los
+archivos runtime oficiales; `RPGMAKER_ENGINE=auto|mv|mz` permite un override
+explícito. Los comandos de plugin MV usan `raw_command` o `command_name` +
+`mv_args`; MZ usa `plugin_name` + `command_name` + `args`. No se traducen de
+forma automática el código de plugins de terceros ni los formatos de animación.
+
 ### Qué hace
 
-RPG Maker MCP expone tu proyecto de RPG Maker MZ como un conjunto de herramientas que un asistente IA puede llamar. En lugar de describir lo que quieres y copiar JSON a mano, simplemente pides al agente que lo haga — con backups automáticos, validación y un historial de cambios completo.
+RPG Maker MCP expone tu proyecto de RPG Maker MV/MZ como un conjunto de herramientas que un asistente IA puede llamar. En lugar de describir lo que quieres y copiar JSON a mano, simplemente pides al agente que lo haga — con backups automáticos, validación y un historial de cambios completo.
 
 También incluye un **bridge de control en tiempo real**: instala un plugin ligero en tu juego una vez y el agente puede leer el estado del juego, activar switches, cambiar variables, teleportar al jugador y desencadenar batallas mientras el juego está corriendo.
 
@@ -659,7 +697,7 @@ También incluye un **bridge de control en tiempo real**: instala un plugin lige
 | Requisito | Versión |
 |---|---|
 | Node.js | 20 + |
-| RPG Maker MZ | cualquiera (proyecto existente) |
+| RPG Maker MV o MZ | cualquiera (proyecto existente) |
 
 ### Instalación
 
@@ -675,10 +713,11 @@ npm run build
 Copia `.env.example` a `.env`:
 
 ```env
-# Obligatorio — ruta absoluta a la raíz de tu proyecto RPG Maker MZ
+# Obligatorio — ruta absoluta a la raíz de tu proyecto RPG Maker MV/MZ
 RPGMAKER_PROJECT_PATH=C:\Users\tú\Documentos\MiJuego
+RPGMAKER_ENGINE=auto             # auto | mv | mz
 
-# Opcional — ruta al ejecutable RPG Maker MZ (para la herramienta launch-game)
+# Opcional — ruta al ejecutable RPG Maker MV/MZ (para la herramienta launch-game)
 RPGMAKER_EXECUTABLE_PATH=C:\Program Files\RPG Maker MZ\RPGMakerMZ.exe
 
 # Opcional
@@ -904,9 +943,9 @@ Fórmula de índice: `x + y × anchura + capa × anchura × altura`. Capas: 0–
 | `edit-plugin-parameters` | `plugin_name` · `parameters {clave: "valor", …}` |
 | `reorder-plugin` | `plugin_name` · `position (first\|last\|before\|after)` · `relative_plugin?` |
 
-**`edit-plugin-parameters`** — Actualiza parámetros individuales de un plugin registrado. Solo se cambian las claves indicadas; el resto se preserva. Los valores deben ser strings (formato de RPG Maker MZ).
+**`edit-plugin-parameters`** — Actualiza parámetros individuales de un plugin registrado. Solo se cambian las claves indicadas; el resto se preserva. Los valores deben ser strings (formato de RPG Maker MV/MZ).
 
-**`reorder-plugin`** — Cambia el orden de carga de un plugin en `js/plugins.js`. `position: "before"` y `"after"` requieren `relative_plugin`. El orden de plugins es crítico en RPG Maker MZ.
+**`reorder-plugin`** — Cambia el orden de carga de un plugin en `js/plugins.js`. `position: "before"` y `"after"` requieren `relative_plugin`. El orden de plugins es crítico en RPG Maker MV/MZ.
 
 #### Animaciones
 
@@ -961,12 +1000,12 @@ Fórmula de índice: `x + y × anchura + capa × anchura × altura`. Capas: 0–
 
 Estas herramientas controlan el **juego en ejecución**. Requieren:
 1. `setup-debug-plugin` llamado una vez en el proyecto
-2. El plugin activado en el Plugin Manager de RPG Maker MZ
+2. El plugin activado en el Plugin Manager del RPG Maker MV/MZ detectado
 3. El juego en ejecución (pulsar Play / F5)
 
 | Herramienta | Descripción |
 |---|---|
-| `launch-game` | Lanza el ejecutable de RPG Maker MZ |
+| `launch-game` | Lanza el ejecutable configurado de RPG Maker MV/MZ |
 | `get-game-state` | Lee mapa actual, posición del jugador, HP/nivel del grupo, oro |
 | `get-switch` | Lee el valor ON/OFF actual de un switch del juego (`id`) |
 | `get-variable` | Lee el valor numérico actual de una variable del juego (`id`) |

@@ -3,7 +3,7 @@ import type { Tool } from "@modelcontextprotocol/sdk/types.js";
 export const CreateWeaponTool: Tool = {
   name: "create-weapon",
   description:
-    "Create a new weapon in the RPG Maker MZ database. The name is required. " +
+    "Create a new weapon in the RPG Maker MV/MZ database. The name is required. " +
     "Stat bonuses are stored in an 8-element params array " +
     "[maxHp, maxMp, atk, def, mat, mdf, agi, luk]; use attack and magic_attack to set the relevant slots. " +
     "Returns the new weapon_id.",

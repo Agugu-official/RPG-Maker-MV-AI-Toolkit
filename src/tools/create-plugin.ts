@@ -5,7 +5,7 @@
 export const CreatePluginTool = {
   name: "create-plugin",
   description:
-    "Generate a new JavaScript plugin for RPG Maker MZ",
+    "Generate a new JavaScript plugin for the detected RPG Maker MV or MZ project. Command templates use MV pluginCommand hooks or MZ PluginManager.registerCommand.",
   inputSchema: {
     type: "object" as const,
     properties: {

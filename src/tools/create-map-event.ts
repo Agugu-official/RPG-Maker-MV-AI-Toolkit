@@ -1,3 +1,5 @@
+import { eventCommandSchema } from "./event-command-schema.js";
+
 /**
  * Herramienta: Crear Evento de Mapa
  */
@@ -71,21 +73,7 @@ export const CreateMapEventTool = {
             commands: {
               type: "array",
               description: "Event commands to execute",
-              items: {
-                type: "object",
-                properties: {
-                  type: {
-                    type: "string",
-                    enum: ["message", "choice", "wait", "transfer", "script"],
-                    description: "Command type",
-                  },
-                  data: {
-                    type: "string",
-                    description: "Command data (varies by type)",
-                  },
-                },
-                required: ["type"],
-              },
+              items: eventCommandSchema,
             },
           },
         },

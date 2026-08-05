@@ -4,7 +4,7 @@
 
 export const EditItemTool = {
   name: "edit-item",
-  description: "Create or edit an item, weapon, or armor in your RPG Maker MZ project",
+  description: "Create or edit an item, weapon, or armor in your RPG Maker MV/MZ project",
   inputSchema: {
     type: "object" as const,
     properties: {

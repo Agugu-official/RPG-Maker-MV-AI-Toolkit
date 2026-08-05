@@ -2,7 +2,7 @@ import type { Tool } from "@modelcontextprotocol/sdk/types.js";
 
 export const EditDropItemsTool: Tool = {
   name: "edit-drop-items",
-  description: "Edit the drop table of an enemy. RPG Maker MZ supports up to 3 drop slots. kind: 0=none, 1=item, 2=weapon, 3=armor. denominator=N means 1-in-N chance.",
+  description: "Edit the drop table of an enemy. RPG Maker MV/MZ supports up to 3 drop slots. kind: 0=none, 1=item, 2=weapon, 3=armor. denominator=N means 1-in-N chance.",
   inputSchema: {
     type: "object",
     properties: {

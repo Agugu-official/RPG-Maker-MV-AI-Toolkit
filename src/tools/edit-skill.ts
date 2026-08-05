@@ -2,7 +2,7 @@ import type { Tool } from "@modelcontextprotocol/sdk/types.js";
 
 export const EditSkillTool: Tool = {
   name: "edit-skill",
-  description: "Create or update a skill in the RPG Maker MZ project. Omit skill_id to create a new skill.",
+  description: "Create or update a skill in the RPG Maker MV/MZ project. Omit skill_id to create a new skill.",
   inputSchema: {
     type: "object",
     properties: {

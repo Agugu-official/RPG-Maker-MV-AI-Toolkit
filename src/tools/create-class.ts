@@ -3,7 +3,7 @@ import type { Tool } from "@modelcontextprotocol/sdk/types.js";
 export const CreateClassTool: Tool = {
   name: "create-class",
   description:
-    "Create a new class in the RPG Maker MZ database. The name is required. " +
+    "Create a new class in the RPG Maker MV/MZ database. The name is required. " +
     "Experience curve is controlled by exp_basis, exp_extra, exp_acc_a, and exp_acc_b (all default 30/20/30/30). " +
     "The stat growth params matrix defaults to all zeros; use edit-class-learnings to add skill learnings. " +
     "Returns the new class_id.",

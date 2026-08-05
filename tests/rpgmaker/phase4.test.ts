@@ -231,42 +231,42 @@ describe("RPGMakerWriter.writePlugin — filename sanitization", () => {
   });
 
   it("accepts a normal plugin filename", () => {
-    const writer = new RPGMakerWriter({ projectPath: dir, createBackup: false });
+    const writer = new RPGMakerWriter({ projectPath: dir, createBackup: false, engine: "mz" });
     expect(() => writer.writePlugin("MyPlugin.js", "// code")).not.toThrow();
   });
 
   it("rejects filename with angle brackets", () => {
-    const writer = new RPGMakerWriter({ projectPath: dir, createBackup: false });
+    const writer = new RPGMakerWriter({ projectPath: dir, createBackup: false, engine: "mz" });
     expect(() => writer.writePlugin("<evil>.js", "// code")).toThrow(/Invalid plugin filename/);
   });
 
   it("rejects filename with colon", () => {
-    const writer = new RPGMakerWriter({ projectPath: dir, createBackup: false });
+    const writer = new RPGMakerWriter({ projectPath: dir, createBackup: false, engine: "mz" });
     expect(() => writer.writePlugin("C:plugin.js", "// code")).toThrow(/Invalid plugin filename/);
   });
 
   it("rejects filename with path separator", () => {
-    const writer = new RPGMakerWriter({ projectPath: dir, createBackup: false });
+    const writer = new RPGMakerWriter({ projectPath: dir, createBackup: false, engine: "mz" });
     expect(() => writer.writePlugin("../evil.js", "// code")).toThrow(/Invalid plugin filename/);
   });
 
   it("rejects filename with backslash", () => {
-    const writer = new RPGMakerWriter({ projectPath: dir, createBackup: false });
+    const writer = new RPGMakerWriter({ projectPath: dir, createBackup: false, engine: "mz" });
     expect(() => writer.writePlugin("path\\evil.js", "// code")).toThrow(/Invalid plugin filename/);
   });
 
   it("rejects reserved Windows name NUL", () => {
-    const writer = new RPGMakerWriter({ projectPath: dir, createBackup: false });
+    const writer = new RPGMakerWriter({ projectPath: dir, createBackup: false, engine: "mz" });
     expect(() => writer.writePlugin("NUL.js", "// code")).toThrow(/Invalid plugin filename/);
   });
 
   it("rejects reserved Windows name COM1", () => {
-    const writer = new RPGMakerWriter({ projectPath: dir, createBackup: false });
+    const writer = new RPGMakerWriter({ projectPath: dir, createBackup: false, engine: "mz" });
     expect(() => writer.writePlugin("COM1.js", "// code")).toThrow(/Invalid plugin filename/);
   });
 
   it("writes the file when filename is valid", () => {
-    const writer = new RPGMakerWriter({ projectPath: dir, createBackup: false });
+    const writer = new RPGMakerWriter({ projectPath: dir, createBackup: false, engine: "mz" });
     writer.writePlugin("ValidPlugin.js", "// code");
     expect(fs.existsSync(path.join(dir, "js", "plugins", "ValidPlugin.js"))).toBe(true);
   });

@@ -4,7 +4,7 @@
 
 export const EditEnemyTool = {
   name: "edit-enemy",
-  description: "Create or edit an enemy in your RPG Maker MZ project",
+  description: "Create or edit an enemy in your RPG Maker MV/MZ project",
   inputSchema: {
     type: "object" as const,
     properties: {

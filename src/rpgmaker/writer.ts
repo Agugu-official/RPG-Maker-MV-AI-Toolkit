@@ -1,15 +1,18 @@
-/**
- * Writer para archivos de datos de RPG Maker MZ
- */
+/** Writer for shared RPG Maker MV/MZ data files. */
 
 import * as fs from "fs";
 import * as path from "path";
+import {
+  detectProjectEngine,
+  type RPGMakerEngine,
+} from "./engine.js";
 
 export interface WriteOptions {
   projectPath: string;
   createBackup?: boolean;
   debug?: boolean;
   maxBackups?: number;
+  engine?: RPGMakerEngine;
 }
 
 type RPGDatabaseEntry = Record<string, unknown> & {
@@ -32,6 +35,7 @@ export class RPGMakerWriter {
   private createBackup: boolean;
   private debug: boolean;
   private maxBackups: number;
+  public readonly engine: RPGMakerEngine;
 
   constructor(options: WriteOptions) {
     this.projectPath = options.projectPath;
@@ -40,10 +44,11 @@ export class RPGMakerWriter {
     this.createBackup = options.createBackup !== false;
     this.debug = options.debug || false;
     this.maxBackups = options.maxBackups ?? 10;
+    this.engine = options.engine ?? detectProjectEngine(this.projectPath).engine;
 
     if (!fs.existsSync(this.dataPath)) {
       throw new Error(
-        `Data directory not found at: ${this.dataPath}. Is this a valid RPG Maker MZ project?`
+        `Data directory not found at: ${this.dataPath}. Is this a valid RPG Maker ${this.engine.toUpperCase()} project?`
       );
     }
 
@@ -141,7 +146,7 @@ export class RPGMakerWriter {
   }
 
   /**
-   * Escribe un mapa RPG Maker MZ por ID y actualiza MapInfos.json + System.json.versionId
+   * Writes a map by ID and updates MapInfos.json + System.json.versionId.
    */
   writeMap(mapId: number, mapData: unknown, mapInfo?: unknown): void {
     const mapFilename = `Map${String(mapId).padStart(3, "0")}.json`;

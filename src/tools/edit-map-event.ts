@@ -1,16 +1,5 @@
 import type { Tool } from "@modelcontextprotocol/sdk/types.js";
-
-const commandSchema = {
-  type: "object",
-  properties: {
-    type: {
-      type: "string",
-      enum: ["message", "choice", "wait", "transfer", "script", "switch", "variable", "common-event", "battle", "animation"],
-    },
-    data: { type: "string" },
-  },
-  required: ["type"],
-};
+import { eventCommandSchema } from "./event-command-schema.js";
 
 export const EditMapEventTool: Tool = {
   name: "edit-map-event",
@@ -28,7 +17,7 @@ export const EditMapEventTool: Tool = {
       append_commands: {
         type: "array",
         description: "Commands to append to the end of page 0's command list (before the terminator)",
-        items: commandSchema,
+        items: eventCommandSchema,
       },
     },
     required: ["map_id", "event_id"],
