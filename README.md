@@ -2,7 +2,7 @@
 
 **Model Context Protocol server for RPG Maker MV/MZ** — lets any MCP-compatible AI (Claude, GPT, etc.) read and write your game project directly, and control the running game in real time.
 
-> Available in [English](#english) · [Español](#español)
+> Available in [English](#english) · [简体中文 README](README.zh_cn.md) · [Español](#español)
 
 ---
 
