@@ -1,6 +1,8 @@
 import * as http from "http";
 import { RPGMakerDebugBridge, type BattleLogEntry, type BattleState, type GameState } from "./debug-bridge.js";
 
+export type RPGMakerHttpBridgeErrorHandler = (error: NodeJS.ErrnoException) => void;
+
 /**
  * Create the HTTP bridge used by the generated MV/MZ debug plugin.
  *
@@ -64,5 +66,46 @@ export function createRPGMakerHttpBridge(
 
     res.writeHead(404);
     res.end();
+  });
+}
+
+/**
+ * Start the game bridge without allowing an asynchronous listen error to
+ * become an unhandled EventEmitter error. A failed bridge is reported to the
+ * caller so file-based MCP tools can continue while runtime tools remain
+ * unavailable in this process.
+ */
+export function listenRPGMakerHttpBridge(
+  server: http.Server,
+  port: number,
+  host = "127.0.0.1",
+  onError?: RPGMakerHttpBridgeErrorHandler,
+): Promise<boolean> {
+  return new Promise((resolve) => {
+    let settled = false;
+
+    const handleError = (error: NodeJS.ErrnoException): void => {
+      onError?.(error);
+      if (!settled) {
+        settled = true;
+        resolve(false);
+      }
+    };
+
+    // Keep this listener attached for the lifetime of the server. The initial
+    // bind error is not the only asynchronous server error Node can emit.
+    server.on("error", handleError);
+    server.once("listening", () => {
+      if (!settled) {
+        settled = true;
+        resolve(true);
+      }
+    });
+
+    try {
+      server.listen(port, host);
+    } catch (error) {
+      handleError(error as NodeJS.ErrnoException);
+    }
   });
 }

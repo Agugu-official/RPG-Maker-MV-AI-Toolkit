@@ -1,6 +1,6 @@
 import * as http from "http";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { createRPGMakerHttpBridge } from "../../src/rpgmaker/http-bridge.js";
+import { createRPGMakerHttpBridge, listenRPGMakerHttpBridge } from "../../src/rpgmaker/http-bridge.js";
 import { RPGMakerDebugBridge, type GameState } from "../../src/rpgmaker/debug-bridge.js";
 
 describe("RPG Maker HTTP bridge", () => {
@@ -72,5 +72,29 @@ describe("RPG Maker HTTP bridge", () => {
     expect(response.status).toBe(200);
     await expect(pending).resolves.toMatchObject({ mapId: 2, queryResult: { value: true } });
     expect(bridge.getCommand()).toBeNull();
+  });
+
+  it("handles an occupied port without an unhandled server error", async () => {
+    const blocker = http.createServer();
+    await new Promise<void>((resolve, reject) => {
+      blocker.once("error", reject);
+      blocker.listen(0, "127.0.0.1", () => resolve());
+    });
+
+    const occupiedPort = (blocker.address() as { port: number }).port;
+    const conflictedBridge = createRPGMakerHttpBridge(new RPGMakerDebugBridge());
+    let reportedCode: string | undefined;
+
+    await expect(
+      listenRPGMakerHttpBridge(conflictedBridge, occupiedPort, "127.0.0.1", (error) => {
+        reportedCode = error.code;
+      }),
+    ).resolves.toBe(false);
+
+    expect(reportedCode).toBe("EADDRINUSE");
+
+    await new Promise<void>((resolve, reject) => {
+      blocker.close((error) => error ? reject(error) : resolve());
+    });
   });
 });

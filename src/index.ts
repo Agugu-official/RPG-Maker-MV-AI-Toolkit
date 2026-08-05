@@ -12,7 +12,7 @@ type ZodTypeAny = z.ZodTypeAny;
 import { RPGMakerReader } from "./rpgmaker/reader.js";
 import { RPGMakerWriter } from "./rpgmaker/writer.js";
 import { RPGMakerDebugBridge } from "./rpgmaker/debug-bridge.js";
-import { createRPGMakerHttpBridge } from "./rpgmaker/http-bridge.js";
+import { createRPGMakerHttpBridge, listenRPGMakerHttpBridge } from "./rpgmaker/http-bridge.js";
 import { getRPGMakerBridgePort } from "./rpgmaker/runtime-script.js";
 import { ChangeLog } from "./rpgmaker/change-log.js";
 import { detectProjectEngine, type RPGMakerProjectProfile } from "./rpgmaker/engine.js";
@@ -442,9 +442,21 @@ async function main() {
   // HTTP bridge for game plugin communication
   const httpServer = createRPGMakerHttpBridge(debugBridge);
 
-  httpServer.listen(BRIDGE_PORT, "127.0.0.1", () => {
-    logger.info(`✓ Game bridge HTTP on port ${BRIDGE_PORT}`);
+  const bridgeStarted = await listenRPGMakerHttpBridge(httpServer, BRIDGE_PORT, "127.0.0.1", (error) => {
+    const errorCode = error.code ?? "UNKNOWN";
+    if (errorCode === "EADDRINUSE") {
+      logger.warn(
+        `Game bridge HTTP could not bind to 127.0.0.1:${BRIDGE_PORT} because the port is already in use. ` +
+        "File-based MCP tools remain available; runtime tools require a single bridge instance.",
+      );
+    } else {
+      logger.error(`Game bridge HTTP error (${errorCode}): ${error.message}`);
+    }
   });
+
+  if (bridgeStarted) {
+    logger.info(`✓ Game bridge HTTP on port ${BRIDGE_PORT}`);
+  }
 
   const transport = new StdioServerTransport();
   await server.connect(transport);
