@@ -97,6 +97,72 @@ Add this block to `claude_desktop_config.json`:
 }
 ```
 
+### Connecting to Codex
+
+This server uses MCP over **STDIO** through `StdioServerTransport`. The HTTP server configured by `RPGMAKER_BRIDGE_PORT` is only the local bridge used by the generated `RPGMakerDebugger` plugin (`/ping`, `/ack`, `/gamestate`, etc.); it is not an MCP HTTP endpoint. Register the server as a STDIO server in Codex rather than using the bridge port with `--url`.
+
+The official Codex configuration is shared by Codex CLI, the Codex IDE extension, and the ChatGPT desktop app. Build the server first, then register it with the Codex CLI:
+
+```bash
+npm run build
+
+codex mcp add rpgmaker \
+  --env RPGMAKER_PROJECT_PATH=/absolute/path/to/MyGame \
+  --env RPGMAKER_ENGINE=auto \
+  --env RPGMAKER_BRIDGE_PORT=9001 \
+  -- node /absolute/path/to/RPG-Maker-AI-Toolkit/dist/index.js
+```
+
+If `launch-game` is needed, add the executable path as another `--env` entry:
+
+```bash
+codex mcp add rpgmaker \
+  --env RPGMAKER_PROJECT_PATH=/absolute/path/to/MyGame \
+  --env RPGMAKER_ENGINE=auto \
+  --env RPGMAKER_EXECUTABLE_PATH=/absolute/path/to/RPGMaker \
+  -- node /absolute/path/to/RPG-Maker-AI-Toolkit/dist/index.js
+```
+
+On Windows PowerShell, use the equivalent command with backtick line continuations:
+
+```powershell
+codex mcp add rpgmaker `
+  --env "RPGMAKER_PROJECT_PATH=C:\Users\you\Documents\MyGame" `
+  --env "RPGMAKER_ENGINE=auto" `
+  --env "RPGMAKER_BRIDGE_PORT=9001" `
+  -- node "C:\path\to\RPG-Maker-AI-Toolkit\dist\index.js"
+```
+
+Verify the registration and inspect the stored configuration:
+
+```bash
+codex mcp list
+codex mcp get rpgmaker
+```
+
+Alternatively, add the equivalent entry to `~/.codex/config.toml`:
+
+```toml
+[mcp_servers.rpgmaker]
+command = "node"
+args = ["/absolute/path/to/RPG-Maker-AI-Toolkit/dist/index.js"]
+env = {
+  RPGMAKER_PROJECT_PATH = "/absolute/path/to/MyGame",
+  RPGMAKER_ENGINE = "auto",
+  RPGMAKER_BRIDGE_PORT = "9001"
+}
+```
+
+In the Codex IDE extension or ChatGPT desktop app, open **MCP servers → Add server**, choose **STDIO**, enter the same command, arguments, and environment variables, then save and restart the extension/app. Once configured, `/mcp` in the Codex TUI shows the active MCP servers.
+
+### Connecting to ChatGPT web
+
+ChatGPT web does not read the local Codex configuration. The official ChatGPT connection flow requires the MCP server to be reachable through a public HTTPS Streamable HTTP endpoint, typically ending in `/mcp`, or through a Secure MCP Tunnel. It then requires **Settings → Security and login → Developer mode**, followed by adding the server from **ChatGPT Plugins → +**.
+
+This repository currently exposes a local STDIO MCP server and a separate game-debug HTTP bridge, not a public Streamable HTTP MCP endpoint. Therefore the Codex/ChatGPT desktop STDIO setup above is the supported local path; connecting from ChatGPT web requires an additional HTTPS MCP deployment or tunnel.
+
+Official references: [Codex CLI](https://developers.openai.com/codex/cli) · [MCP connection guide](https://learn.chatgpt.com/docs/extend/mcp) · [ChatGPT MCP connection and testing](https://developers.openai.com/plugins/deploy/connect-chatgpt)
+
 ### Project Structure
 
 ```

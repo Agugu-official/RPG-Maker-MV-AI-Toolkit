@@ -95,6 +95,72 @@ npm start
 }
 ```
 
+## 连接 Codex
+
+本服务通过 `StdioServerTransport` 使用 **STDIO** 传输 MCP。`RPGMAKER_BRIDGE_PORT` 对应的是 `RPGMakerDebugger` 插件使用的本地游戏调试桥接（`/ping`、`/ack`、`/gamestate` 等），不是 MCP HTTP 地址。因此在 Codex 中应注册为 STDIO 服务，不要把该端口作为 `--url` 使用。
+
+Codex CLI、Codex IDE 扩展和 ChatGPT 桌面端共享 MCP 配置。先构建服务，再使用 Codex CLI 注册：
+
+```bash
+npm run build
+
+codex mcp add rpgmaker \
+  --env RPGMAKER_PROJECT_PATH=/absolute/path/to/MyGame \
+  --env RPGMAKER_ENGINE=auto \
+  --env RPGMAKER_BRIDGE_PORT=9001 \
+  -- node /absolute/path/to/RPG-Maker-AI-Toolkit/dist/index.js
+```
+
+如果需要使用 `launch-game`，再增加可执行文件路径：
+
+```bash
+codex mcp add rpgmaker \
+  --env RPGMAKER_PROJECT_PATH=/absolute/path/to/MyGame \
+  --env RPGMAKER_ENGINE=auto \
+  --env RPGMAKER_EXECUTABLE_PATH=/absolute/path/to/RPGMaker \
+  -- node /absolute/path/to/RPG-Maker-AI-Toolkit/dist/index.js
+```
+
+Windows PowerShell 使用等价命令：
+
+```powershell
+codex mcp add rpgmaker `
+  --env "RPGMAKER_PROJECT_PATH=C:\Users\you\Documents\MyGame" `
+  --env "RPGMAKER_ENGINE=auto" `
+  --env "RPGMAKER_BRIDGE_PORT=9001" `
+  -- node "C:\path\to\RPG-Maker-AI-Toolkit\dist\index.js"
+```
+
+检查注册结果：
+
+```bash
+codex mcp list
+codex mcp get rpgmaker
+```
+
+也可以直接编辑 `~/.codex/config.toml`：
+
+```toml
+[mcp_servers.rpgmaker]
+command = "node"
+args = ["/absolute/path/to/RPG-Maker-AI-Toolkit/dist/index.js"]
+env = {
+  RPGMAKER_PROJECT_PATH = "/absolute/path/to/MyGame",
+  RPGMAKER_ENGINE = "auto",
+  RPGMAKER_BRIDGE_PORT = "9001"
+}
+```
+
+在 Codex IDE 扩展或 ChatGPT 桌面端中，打开 **MCP servers → Add server**，选择 **STDIO**，填写相同的命令、参数和环境变量，然后保存并重启扩展或应用。配置完成后，可在 Codex TUI 中输入 `/mcp` 查看已连接的 MCP 服务。
+
+## 连接 ChatGPT 网页端
+
+ChatGPT 网页端不会读取本机的 Codex 配置。按照官方接入流程，MCP 服务必须通过公共 HTTPS Streamable HTTP 端点（通常以 `/mcp` 结尾）或 Secure MCP Tunnel 暴露；随后在 **Settings → Security and login → Developer mode** 中开启开发者模式，再从 **ChatGPT Plugins → +** 添加服务。
+
+本项目当前提供的是本地 STDIO MCP 服务和独立的游戏调试 HTTP 桥接，并未提供公共 Streamable HTTP MCP 端点。因此本地使用应采用上面的 Codex/ChatGPT 桌面端 STDIO 方式；若要从 ChatGPT 网页端连接，还需要额外部署 HTTPS MCP 服务或隧道。
+
+官方参考：[Codex CLI](https://developers.openai.com/codex/cli) · [MCP 接入文档](https://learn.chatgpt.com/docs/extend/mcp) · [ChatGPT MCP 接入与测试](https://developers.openai.com/plugins/deploy/connect-chatgpt)
+
 ## 项目结构
 
 ```text
