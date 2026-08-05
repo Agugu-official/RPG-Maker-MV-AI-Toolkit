@@ -2,7 +2,7 @@
 
 **Model Context Protocol server for RPG Maker MV/MZ** — lets any MCP-compatible AI (Claude, GPT, etc.) read and write your game project directly, and control the running game in real time.
 
-> Available in [English](#english) · [Español](#español)
+> Available in [English](#english) · [Español](#español) · [中文](#中文)
 
 ---
 
@@ -782,6 +782,39 @@ npm run build && npm start   # producción
 }
 ```
 
+#### Rutas de Windows
+
+En Windows, usa barras `/` en las rutas JSON. Por ejemplo, si el toolkit está
+en `E:\Apps\Workbench\Projects\RPG-Maker-MV-AI-Toolkit`:
+
+```json
+{
+  "mcpServers": {
+    "rpgmaker": {
+      "command": "node",
+      "args": ["E:/Apps/Workbench/Projects/RPG-Maker-MV-AI-Toolkit/dist/index.js"],
+      "env": {
+        "RPGMAKER_PROJECT_PATH": "E:/ruta/a/MiJuego",
+        "RPGMAKER_ENGINE": "auto",
+        "RPGMAKER_BRIDGE_PORT": "9001"
+      }
+    }
+  }
+}
+```
+
+Si usas barras invertidas en JSON, escapa cada una:
+
+```json
+"args": ["E:\\Apps\\Workbench\\Projects\\RPG-Maker-MV-AI-Toolkit\\dist\\index.js"]
+```
+
+Para iniciar el servidor manualmente desde PowerShell:
+
+```powershell
+node "E:\Apps\Workbench\Projects\RPG-Maker-MV-AI-Toolkit\dist\index.js"
+```
+
 ### Herramientas disponibles
 
 #### Datos y sistema
@@ -1143,6 +1176,45 @@ npm run test:coverage  # con informe de cobertura
 | `Game not connected` | Lanza el juego con el plugin RPGMakerDebugger activado; espera a que cargue el mapa |
 | Tool de runtime agota el tiempo | El juego puede estar en la pantalla de título — entra al mapa primero |
 | Server cuelgado | `Ctrl+C` → verifica que la ruta es accesible → reinicia con `npm run dev` |
+
+---
+
+## 中文
+
+### Windows 配置
+
+在 Windows 上，推荐在 JSON 路径中使用正斜杠 `/`。例如工具包位于
+`E:\Apps\Workbench\Projects\RPG-Maker-MV-AI-Toolkit`：
+
+```json
+{
+  "mcpServers": {
+    "rpgmaker": {
+      "command": "node",
+      "args": ["E:/Apps/Workbench/Projects/RPG-Maker-MV-AI-Toolkit/dist/index.js"],
+      "env": {
+        "RPGMAKER_PROJECT_PATH": "E:/path/to/MyGame",
+        "RPGMAKER_ENGINE": "auto",
+        "RPGMAKER_BRIDGE_PORT": "9001"
+      }
+    }
+  }
+}
+```
+
+如果在 JSON 中使用反斜杠，需要将每个反斜杠写成 `\\`：
+
+```json
+"args": ["E:\\Apps\\Workbench\\Projects\\RPG-Maker-MV-AI-Toolkit\\dist\\index.js"]
+```
+
+也可以从 PowerShell 手动启动：
+
+```powershell
+node "E:\Apps\Workbench\Projects\RPG-Maker-MV-AI-Toolkit\dist\index.js"
+```
+
+请将 `E:/path/to/MyGame` 替换为实际的 RPG Maker MV/MZ 项目根目录。
 
 ---
 
