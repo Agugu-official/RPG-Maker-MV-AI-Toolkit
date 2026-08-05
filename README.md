@@ -97,6 +97,39 @@ Add this block to `claude_desktop_config.json`:
 }
 ```
 
+#### Windows paths
+
+On Windows, prefer forward slashes in JSON paths. For example, if the toolkit
+is located at `E:\Apps\Workbench\Projects\RPG-Maker-MV-AI-Toolkit`:
+
+```json
+{
+  "mcpServers": {
+    "rpgmaker": {
+      "command": "node",
+      "args": ["E:/Apps/Workbench/Projects/RPG-Maker-MV-AI-Toolkit/dist/index.js"],
+      "env": {
+        "RPGMAKER_PROJECT_PATH": "E:/path/to/MyGame",
+        "RPGMAKER_ENGINE": "auto",
+        "RPGMAKER_BRIDGE_PORT": "9001"
+      }
+    }
+  }
+}
+```
+
+If you use backslashes in JSON, escape each one:
+
+```json
+"args": ["E:\\Apps\\Workbench\\Projects\\RPG-Maker-MV-AI-Toolkit\\dist\\index.js"]
+```
+
+To start the server manually from PowerShell, quote the path when necessary:
+
+```powershell
+node "E:\Apps\Workbench\Projects\RPG-Maker-MV-AI-Toolkit\dist\index.js"
+```
+
 ### Project Structure
 
 ```
