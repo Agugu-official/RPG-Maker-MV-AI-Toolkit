@@ -2,7 +2,7 @@
 
 **Model Context Protocol server for RPG Maker MV/MZ** — lets any MCP-compatible AI (Claude, GPT, etc.) read and write your game project directly, and control the running game in real time.
 
-> Available in [English](#english) · [Español](#español) · [中文](#中文)
+> Available in [English](#english) · [简体中文 README](README.zh_cn.md) · [Español](#español)
 
 ---
 
@@ -129,6 +129,118 @@ To start the server manually from PowerShell, quote the path when necessary:
 ```powershell
 node "E:\Apps\Workbench\Projects\RPG-Maker-MV-AI-Toolkit\dist\index.js"
 ```
+
+### Connecting to Codex
+
+This server uses MCP over **STDIO** through `StdioServerTransport`. The HTTP server configured by `RPGMAKER_BRIDGE_PORT` is only the local bridge used by the generated `RPGMakerDebugger` plugin (`/ping`, `/ack`, `/gamestate`, etc.); it is not an MCP HTTP endpoint. Register the server as a STDIO server in Codex rather than using the bridge port with `--url`.
+
+The official Codex configuration is shared by Codex CLI, the Codex IDE extension, and the ChatGPT desktop app. Build the server first, then register it with the Codex CLI:
+
+```bash
+npm run build
+
+codex mcp add rpgmaker \
+  --env RPGMAKER_PROJECT_PATH=/absolute/path/to/MyGame \
+  --env RPGMAKER_ENGINE=auto \
+  --env RPGMAKER_BRIDGE_PORT=9001 \
+  -- node /absolute/path/to/RPG-Maker-AI-Toolkit/dist/index.js
+```
+
+If `launch-game` is needed, add the executable path as another `--env` entry:
+
+```bash
+codex mcp add rpgmaker \
+  --env RPGMAKER_PROJECT_PATH=/absolute/path/to/MyGame \
+  --env RPGMAKER_ENGINE=auto \
+  --env RPGMAKER_EXECUTABLE_PATH=/absolute/path/to/RPGMaker \
+  -- node /absolute/path/to/RPG-Maker-AI-Toolkit/dist/index.js
+```
+
+On Windows PowerShell, use the equivalent command with backtick line continuations:
+
+```powershell
+codex mcp add rpgmaker `
+  --env "RPGMAKER_PROJECT_PATH=C:\Users\you\Documents\MyGame" `
+  --env "RPGMAKER_ENGINE=auto" `
+  --env "RPGMAKER_BRIDGE_PORT=9001" `
+  -- node "C:\path\to\RPG-Maker-AI-Toolkit\dist\index.js"
+```
+
+Verify the registration and inspect the stored configuration:
+
+```bash
+codex mcp list
+codex mcp get rpgmaker
+```
+
+Alternatively, add the equivalent entry to `~/.codex/config.toml`:
+
+```toml
+[mcp_servers.rpgmaker]
+command = "node"
+args = ["/absolute/path/to/RPG-Maker-AI-Toolkit/dist/index.js"]
+env = {
+  RPGMAKER_PROJECT_PATH = "/absolute/path/to/MyGame",
+  RPGMAKER_ENGINE = "auto",
+  RPGMAKER_BRIDGE_PORT = "9001"
+}
+```
+
+In the Codex IDE extension, open **MCP servers → Add server**, choose **STDIO**, enter the same command, arguments, and environment variables, then save and restart the extension. Once configured, `/mcp` in the Codex TUI shows the active MCP servers.
+
+### Connecting to the ChatGPT desktop app
+
+The official ChatGPT desktop app supports local MCP servers over **STDIO** and shares the same MCP configuration with Codex CLI and the Codex IDE extension. This is the simplest way to use this repository directly from the ChatGPT app.
+
+1. Build the server so the app can launch the compiled entry point:
+
+   ```bash
+   npm run build
+   ```
+
+2. Open **ChatGPT → Settings → MCP servers → Add server**.
+
+3. Enter the following values. Replace every placeholder with an absolute path; the project path must contain the RPG Maker project's `data/` directory.
+
+   ```text
+   Name: rpgmaker
+   Transport: STDIO
+   Command: node
+   Arguments: /absolute/path/to/RPG-Maker-AI-Toolkit/dist/index.js
+
+   Environment:
+     RPGMAKER_PROJECT_PATH=/absolute/path/to/MyGame
+     RPGMAKER_ENGINE=auto
+     RPGMAKER_BRIDGE_PORT=9001
+   ```
+
+   Add `RPGMAKER_EXECUTABLE_PATH=/absolute/path/to/RPGMaker` only when the `launch-game` tool is needed.
+
+4. Save the server and select **Restart** in the MCP servers settings.
+
+5. In a new ChatGPT conversation, type `/mcp` to confirm that `rpgmaker` is enabled. Start with a read-only request such as `Run health-check and list the maps in my project.`
+
+The app launches the configured STDIO command itself. You do not need to keep a separate `npm run dev` or `pnpm run dev` process running for this connection. The `RPGMAKER_BRIDGE_PORT` value is still needed when the RPG Maker game uses the generated `RPGMakerDebugger` plugin, but it is not the MCP server address.
+
+### Connecting to ChatGPT web or Work
+
+ChatGPT web does not read local Codex configuration files and cannot attach to a local STDIO process by entering a shell command. The official hosted ChatGPT flow is:
+
+1. Make the MCP server reachable through a public HTTPS **Streamable HTTP** endpoint, typically ending in `/mcp`, or connect a private server through **Secure MCP Tunnel**. This repository currently does not implement a remote Streamable HTTP MCP endpoint.
+
+2. In ChatGPT, open **Settings → Security and login** and turn on **Developer mode**. Availability can depend on the account or workspace policy.
+
+3. Open [ChatGPT Plugins](https://chatgpt.com/plugins), select **+**, enter a user-facing name and description, and under **Connection** enter the HTTPS MCP URL including `/mcp`. For a private tunnel, choose **Tunnel** and select or enter its `tunnel_id`.
+
+4. Create the connection, review the discovered tools, then start a new Work conversation and add the MCP connection from the tools menu. Test with a read-only request such as `Run health-check` before using editing tools.
+
+5. After changing tool names, descriptions, schemas, or annotations, deploy/restart the server, select **Refresh** in ChatGPT Plugins, and start a new conversation before retesting.
+
+**Important:** `RPGMAKER_BRIDGE_PORT=9001` is only the local HTTP bridge used by the RPG Maker debug plugin (`/ping`, `/ack`, `/gamestate`, and similar routes). It is not an MCP HTTP endpoint, so `http://127.0.0.1:9001` must not be entered in the ChatGPT connection URL field. Running `npm run dev` or `pnpm run dev` alone is therefore sufficient for local STDIO clients, but not for ChatGPT web.
+
+For a private local server, follow the official [Secure MCP Tunnel](https://developers.openai.com/api/docs/guides/secure-mcp-tunnels) guide: create a tunnel, configure `tunnel-client` to reach this server over STDIO, keep `tunnel-client run` running, and then choose **Tunnel** when creating the ChatGPT developer-mode app. Secure MCP Tunnel supports private developer-mode testing; public plugin distribution still requires a stable public HTTPS endpoint.
+
+Official references: [MCP in ChatGPT and Codex](https://learn.chatgpt.com/docs/extend/mcp) · [Quickstart](https://developers.openai.com/plugins/quickstart) · [Connect and test your plugin](https://developers.openai.com/plugins/deploy/connect-chatgpt) · [Secure MCP Tunnel](https://developers.openai.com/api/docs/guides/secure-mcp-tunnels)
 
 ### Project Structure
 
@@ -1178,43 +1290,6 @@ npm run test:coverage  # con informe de cobertura
 | Server cuelgado | `Ctrl+C` → verifica que la ruta es accesible → reinicia con `npm run dev` |
 
 ---
-
-## 中文
-
-### Windows 配置
-
-在 Windows 上，推荐在 JSON 路径中使用正斜杠 `/`。例如工具包位于
-`E:\Apps\Workbench\Projects\RPG-Maker-MV-AI-Toolkit`：
-
-```json
-{
-  "mcpServers": {
-    "rpgmaker": {
-      "command": "node",
-      "args": ["E:/Apps/Workbench/Projects/RPG-Maker-MV-AI-Toolkit/dist/index.js"],
-      "env": {
-        "RPGMAKER_PROJECT_PATH": "E:/path/to/MyGame",
-        "RPGMAKER_ENGINE": "auto",
-        "RPGMAKER_BRIDGE_PORT": "9001"
-      }
-    }
-  }
-}
-```
-
-如果在 JSON 中使用反斜杠，需要将每个反斜杠写成 `\\`：
-
-```json
-"args": ["E:\\Apps\\Workbench\\Projects\\RPG-Maker-MV-AI-Toolkit\\dist\\index.js"]
-```
-
-也可以从 PowerShell 手动启动：
-
-```powershell
-node "E:\Apps\Workbench\Projects\RPG-Maker-MV-AI-Toolkit\dist\index.js"
-```
-
-请将 `E:/path/to/MyGame` 替换为实际的 RPG Maker MV/MZ 项目根目录。
 
 ---
 
